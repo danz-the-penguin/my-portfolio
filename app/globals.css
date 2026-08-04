@@ -1,0 +1,233 @@
+/* globals.css */
+
+/* ==========================================================================
+   1. BASE VARIABLES & DEFAULT THEME (Metallic Silver - Light Mode)
+   --------------------------------------------------------------------------
+   - :root defines global CSS custom properties (variables) available everywhere.
+   - Values here act as the baseline fallback for light mode.
+   ========================================================================== */
+:root {
+  --bg-main: #ffffff;
+  --bg-card: #f8fafc;
+
+  /* Fonts & Borders for Light Mode */
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --accent: #2563eb;
+  --tag-bg: #f1f5f9;
+  --tag-border: #cbd5e1;
+  --heading-gradient: linear-gradient(135deg, #0f172a 0%, #475569 100%);
+
+  /* 
+     WALLPAPER DISABLED FOR COBE TESTING:
+     Set to 'none' so 'wallpaper_b.png' won't interfere with or wash out 
+     the canvas dots/sphere contrast in light mode.
+  */
+  --bg-image: none;
+  /* To re-enable later: --bg-image: url("./wallpaper_b.png"); */
+}
+
+/* ==========================================================================
+   2. DARK MODE OVERRIDES (Metallic Silver - Dark Mode)
+   --------------------------------------------------------------------------
+   - Triggered when the <html> tag has [data-mode="dark"].
+   - Overrides variable values defined in :root.
+   ========================================================================== */
+[data-mode="dark"] {
+  --bg-main: #0a0a0a;
+  --bg-card: #171717;
+
+  /* Light Fonts & Borders for Dark Mode */
+  --text-main: #e5e5e5;
+  --text-muted: #a3a3a3;
+  --border-color: #404040;
+  --accent: #1f49e0;
+  --tag-bg: #262626;
+  --tag-border: #525252;
+  --heading-gradient: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #d4d4d4 40%,
+    #8a8a8a 100%
+  );
+
+  /* Dark mode wallpaper
+   --bg-image: url("./wallpaper_c.png");
+  */
+  --bg-image: none;
+}
+
+/* ==========================================================================
+   3. PALETTE OVERRIDES: CYBERPUNK
+   --------------------------------------------------------------------------
+   - High-contrast pink/neon cyan theme.
+   ========================================================================== */
+[data-theme="cyberpunk"][data-mode="light"] {
+  --bg-main: #fdf2f8;
+  --bg-card: #fce7f3;
+  --text-main: #831843;
+  --text-muted: #be185d;
+  --border-color: #fbcfe8;
+  --accent: #db2777;
+  --tag-bg: #fbcfe8;
+  --tag-border: #f472b6;
+  --heading-gradient: linear-gradient(135deg, #be185d 0%, #9d174d 100%);
+}
+
+[data-theme="cyberpunk"][data-mode="dark"] {
+  --bg-main: #0d0221;
+  --bg-card: #190535;
+  --text-main: #00f5d4;
+  --text-muted: #f72585;
+  --border-color: #7b2cbf;
+  --accent: #7b2cbf;
+  --tag-bg: #240046;
+  --tag-border: #5a189a;
+  --heading-gradient: linear-gradient(135deg, #00f5d4 0%, #f72585 100%);
+}
+
+/* ==========================================================================
+   4. PALETTE OVERRIDES: NORDIC SLATE
+   --------------------------------------------------------------------------
+   - Cool slate gray & sky blue tones.
+   ========================================================================== */
+[data-theme="nordic"][data-mode="light"] {
+  --bg-main: #f8fafc;
+  --bg-card: #f1f5f9;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border-color: #cbd5e1;
+  --accent: #0284c7;
+  --tag-bg: #e2e8f0;
+  --tag-border: #94a3b8;
+  --heading-gradient: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+}
+
+[data-theme="nordic"][data-mode="dark"] {
+  --bg-main: #0f172a;
+  --bg-card: #1e293b;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  --accent: #38bdf8;
+  --tag-bg: #334155;
+  --tag-border: #475569;
+  --heading-gradient: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
+}
+
+/* ==========================================================================
+   5. PALETTE OVERRIDES: EMERALD FOREST
+   --------------------------------------------------------------------------
+   - Natural green forest tones.
+   ========================================================================== */
+[data-theme="emerald"][data-mode="light"] {
+  --bg-main: #f0fdf4;
+  --bg-card: #dcfce7;
+  --text-main: #14532d;
+  --text-muted: #166534;
+  --border-color: #bbf7d0;
+  --accent: #16a34a;
+  --tag-bg: #bbf7d0;
+  --tag-border: #86efac;
+  --heading-gradient: linear-gradient(135deg, #14532d 0%, #15803d 100%);
+}
+
+[data-theme="emerald"][data-mode="dark"] {
+  --bg-main: #022c22;
+  --bg-card: #064e3b;
+  --text-main: #ecfdf5;
+  --text-muted: #6ee7b7;
+  --border-color: #047857;
+  --accent: #10b981;
+  --tag-bg: #065f46;
+  --tag-border: #047857;
+  --heading-gradient: linear-gradient(135deg, #34d399 0%, #059669 100%);
+}
+
+/* ==========================================================================
+   6. WALLPAPER CLEANUP FOR ALTERNATE THEMES
+   --------------------------------------------------------------------------
+   - Ensures non-metallic themes use flat background colors rather than 
+     leaving wallpapers rendered behind them.
+   ========================================================================== */
+[data-theme="cyberpunk"],
+[data-theme="nordic"],
+[data-theme="emerald"] {
+  --bg-image: none !important;
+}
+
+/* ==========================================================================
+   7. GLOBAL CSS RESET & DOCUMENT SETUP
+   --------------------------------------------------------------------------
+   - Standardizes element sizing and resets default browser padding/margins.
+   ========================================================================== */
+* {
+  box-sizing: border-box; /* Includes padding/borders in width & height calculations */
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  min-height: 100vh;
+  max-width: 100vw;
+  overflow-x: hidden; /* Prevents unwanted horizontal scrolling */
+
+  /* Surface rendering driven by CSS variable definitions */
+  background-color: var(--bg-main);
+  background-image: var(--bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+
+  color: var(--text-main);
+
+  /* Smooth theme transitions when switching modes */
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   8. CARD COMPONENT INTERACTION STYLES
+   --------------------------------------------------------------------------
+   - Styles project card hover states, lift animations, and accent borders.
+   ========================================================================== */
+.project-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.project-card-link .project-card {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* Card hover effect: shifts up 4px and lights up border with accent color */
+.project-card-link:hover .project-card {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.project-card-link .link-arrow {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+/* External link arrow micro-animation on hover */
+.project-card-link:hover .link-arrow {
+  transform: translate(2px, -2px);
+}
