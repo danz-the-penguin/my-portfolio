@@ -22,6 +22,8 @@ const PROFILE = {
     github: "https://github.com/danz-the-penguin",
     linkedin: "https://linkedin.com/in/melissatiubinmunang",
     email: "danzthepenguinz@gmail.com",
+    techResume: "/techresume.pdf",
+    nonTechResume: "/nontechresume.pdf",
   },
 };
 
@@ -81,7 +83,7 @@ const EXPERIENCE = [
 ];
 
 // ==========================================
-// 4. REUSABLE HOVER CARD SUB-COMPONENT
+// 4. REUSABLE HOVER CARD & BUTTON SUB-COMPONENTS
 // ==========================================
 function InteractiveCard({ children, style, link, isProjectCard = false }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -142,6 +144,32 @@ function ProjectCard({ project }) {
         ))}
       </div>
     </InteractiveCard>
+  );
+}
+
+function ResumeButton({ href, label }) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  const btnStyle = {
+    ...styles.resumeBtn,
+    transform: isHovered ? "translateY(-4px)" : "none",
+    borderColor: isHovered ? "var(--accent)" : "var(--border-color)",
+    boxShadow: isHovered
+      ? "0 8px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--accent)"
+      : "0 4px 12px rgba(0, 0, 0, 0.12)",
+  };
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={btnStyle}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {label}
+    </a>
   );
 }
 
@@ -229,6 +257,12 @@ export default function Home() {
           >
             Contact Email
           </a>
+          {/* Identical Resume Buttons Matching Card Hover FX */}
+          <ResumeButton href={PROFILE.links.techResume} label="Tech Resume ↗" />
+          <ResumeButton
+            href={PROFILE.links.nonTechResume}
+            label="General Resume ↗"
+          />
         </div>
       </header>
 
@@ -321,13 +355,28 @@ const styles = {
   },
   links: {
     display: "flex",
-    gap: "16px",
+    alignItems: "center",
+    gap: "12px",
+    flexWrap: "wrap",
   },
   link: {
     color: "var(--accent)",
     textDecoration: "none",
     fontWeight: "600",
     fontSize: "0.95rem",
+    cursor: "pointer",
+  },
+  resumeBtn: {
+    color: "var(--text-main)",
+    backgroundColor: "var(--bg-card)",
+    border: "1px solid var(--border-color)",
+    padding: "5px 12px",
+    borderRadius: "6px",
+    textDecoration: "none",
+    fontWeight: "600",
+    fontSize: "0.85rem",
+    display: "inline-block",
+    transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
     cursor: "pointer",
   },
   divider: {
