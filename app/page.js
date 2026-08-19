@@ -63,6 +63,18 @@ const PROJECTS = [
     tags: ["Fish Shell", "Python", "CLI Tooling", "Automation"],
     link: "#",
   },
+  {
+    title: "Scrabble Check V1",
+    description: "scrabble",
+    tags: ["html", "css"],
+    link: "https://penguins-portfolio.vercel.app/solve",
+  },
+  {
+    title: "Scrabble Check V2",
+    description: "scrabble",
+    tags: ["html", "css"],
+    link: "https://penguins-portfolio.vercel.app/solve2",
+  },
 ];
 
 const EXPERIENCE = [

@@ -1,0 +1,194 @@
+/* Windows 98 Classic Theme */
+@font-face {
+  font-family: "PixelSans";
+  src: local("MS Sans Serif"), local("Tahoma"), local("Arial");
+}
+
+.win98-body {
+  background-color: #008080; /* Classic Win98 Teal Desktop */
+  min-height: 100vh;
+  padding: 20px;
+  font-family: "PixelSans", "MS Sans Serif", Tahoma, sans-serif;
+  color: #000000;
+  box-sizing: border-box;
+}
+
+.win98-container {
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+/* Classic Windows 98 Window Panel */
+.win98-window {
+  background-color: #c0c0c0;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: 1px 1px 0px #000000;
+  padding: 3px;
+  margin-bottom: 16px;
+}
+
+/* Window Title Bar */
+.win98-titlebar {
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #ffffff;
+  padding: 3px 6px;
+  font-weight: bold;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.win98-titlebar-controls {
+  display: flex;
+  gap: 2px;
+}
+
+.win98-btn-titlebar {
+  width: 16px;
+  height: 14px;
+  background: #c0c0c0;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  font-size: 9px;
+  font-weight: bold;
+  line-height: 12px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+  color: #000;
+}
+
+.win98-btn-titlebar:active {
+  border-color: #808080 #ffffff #ffffff #808080;
+}
+
+/* Window Content Body */
+.win98-content {
+  padding: 12px;
+}
+
+/* Inset/Sunken Box (Used for inputs and deep containers) */
+.win98-inset {
+  background-color: #ffffff;
+  border: 2px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  box-shadow: inset 1px 1px 0px #000000;
+  padding: 6px;
+}
+
+.win98-field-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.win98-label {
+  display: block;
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+
+.win98-input {
+  width: 100%;
+  padding: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  background-color: #ffffff;
+  border: 2px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  box-shadow: inset 1px 1px 0px #000000;
+  box-sizing: border-box;
+  text-transform: uppercase;
+  outline: none;
+}
+
+/* Scrabble Tile Win98 Style */
+.win98-tile {
+  display: inline-flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 34px;
+  background-color: #ffebad;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: 1px 1px 0px #000000;
+  font-weight: bold;
+  font-size: 16px;
+  color: #000000;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.win98-tile-score {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: bold;
+  color: #555555;
+}
+
+/* Table / Result Row Styles */
+.win98-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid #d4d0c8;
+  cursor: pointer;
+}
+
+.win98-row:hover {
+  background-color: #000080;
+  color: #ffffff;
+}
+
+.win98-row:hover .win98-tile-score {
+  color: #cccccc;
+}
+
+/* Retro Buttons */
+.win98-button {
+  background-color: #c0c0c0;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: 1px 1px 0px #000000;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.win98-button:active {
+  border-color: #808080 #ffffff #ffffff #808080;
+  box-shadow: none;
+}
+
+/* Modal Window */
+.win98-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.win98-badge-bingo {
+  background-color: #800080;
+  color: #ffffff;
+  font-size: 9px;
+  padding: 2px 4px;
+  font-weight: bold;
+}
