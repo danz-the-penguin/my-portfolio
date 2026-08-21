@@ -46,4 +46,10 @@ next-env.d.ts
 #resume file
 /public/*.pdf
 
+# Ignore all solve directories
+app/solve*
 
+# Keep specific solve directories
+!app/solve
+!app/solve2
+!app/solve9

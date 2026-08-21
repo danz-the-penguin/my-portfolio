@@ -75,6 +75,12 @@ const PROJECTS = [
     tags: ["html", "css"],
     link: "https://penguins-portfolio.vercel.app/solve2",
   },
+  {
+    title: "Scrabble Check V3",
+    description: "scrabble",
+    tags: ["html", "css"],
+    link: "https://penguins-portfolio.vercel.app/solve3",
+  },
 ];
 
 const EXPERIENCE = [
