@@ -1,0 +1,369 @@
+/* Windows 98 Classic Theme - Scrabble v3 */
+
+:root {
+  /* Win98 Core Palette */
+  --w98-desktop: #008080;
+  --w98-surface: #c0c0c0;
+  --w98-surface-inset: #ffffff;
+  --w98-text: #000000;
+  --w98-text-light: #ffffff;
+  --w98-border-light: #ffffff;
+  --w98-border-mid: #d4d0c8;
+  --w98-border-dark: #808080;
+  --w98-border-darker: #404040;
+  --w98-title-start: #000080;
+  --w98-title-end: #1084d0;
+  --w98-highlight: #000080;
+
+  /* Scrabble Board Colors */
+  --board-bg: #808080;
+  --board-container: #a0a0a0;
+  --cell-normal: #dcdcdc;
+  --cell-tile-bg: #ffebad;
+  --cell-selected: #ffffcc;
+  --cell-selected-border: #ff0000;
+  --cell-2L-bg: #a3c2e0;
+  --cell-2L-text: #1a365d;
+  --cell-3L-bg: #4b6fa6;
+  --cell-3L-text: #ffffff;
+  --cell-2W-bg: #e0a3a3;
+  --cell-2W-text: #742a2a;
+  --cell-3W-bg: #a64b4b;
+  --cell-3W-text: #ffffff;
+}
+
+@font-face {
+  font-family: "PixelSans";
+  src: local("MS Sans Serif"), local("Tahoma"), local("Arial");
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.win98-body {
+  background-color: var(--w98-desktop);
+  min-height: 100vh;
+  padding: 15px;
+  font-family: "PixelSans", "MS Sans Serif", Tahoma, sans-serif;
+  color: var(--w98-text);
+}
+
+.win98-container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.win98-window {
+  background-color: var(--w98-surface);
+  border: 2px solid;
+  border-color: var(--w98-border-light) var(--w98-border-dark)
+    var(--w98-border-dark) var(--w98-border-light);
+  box-shadow: 1px 1px 0px var(--w98-text);
+  padding: 3px;
+  margin-bottom: 16px;
+}
+
+.win98-titlebar {
+  background: linear-gradient(
+    90deg,
+    var(--w98-title-start),
+    var(--w98-title-end)
+  );
+  color: var(--w98-text-light);
+  padding: 3px 6px;
+  font-weight: bold;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+
+.win98-content {
+  padding: 10px;
+}
+
+/* Main App Layout */
+.v3-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 12px;
+}
+
+@media (max-width: 960px) {
+  .v3-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.win98-inset {
+  background-color: var(--w98-surface-inset);
+  border: 2px solid;
+  border-color: var(--w98-border-dark) var(--w98-border-light)
+    var(--w98-border-light) var(--w98-border-dark);
+  box-shadow: inset 1px 1px 0px var(--w98-text);
+  padding: 6px;
+}
+
+/* Interactive Grid Container */
+.board-grid-container {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  padding: 8px;
+  background: var(--board-container);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 16x16 Interactive Grid (Headers + 15x15 Board) */
+.board-grid {
+  display: grid;
+  grid-template-columns: 24px repeat(15, minmax(24px, 32px));
+  grid-template-rows: 24px repeat(15, minmax(24px, 32px));
+  gap: 2px;
+  background-color: var(--board-bg);
+  border: 2px solid var(--w98-border-darker);
+  padding: 2px;
+}
+
+/* Win98 Beveled Coordinate Headers (A-O, 1-15) */
+.board-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 11px;
+  color: var(--w98-text);
+  background-color: var(--w98-surface);
+  border: 1px solid;
+  border-color: var(--w98-border-light) var(--w98-border-dark)
+    var(--w98-border-dark) var(--w98-border-light);
+  user-select: none;
+}
+
+.board-cell {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 10px;
+  cursor: pointer;
+  user-select: none;
+  background-color: var(--cell-normal);
+  border: 1px solid var(--w98-border-light);
+  text-transform: uppercase;
+  position: relative;
+}
+
+.board-cell:hover {
+  outline: 2px solid var(--w98-highlight);
+  z-index: 2;
+}
+
+.board-cell.selected {
+  outline: 2px solid var(--cell-selected-border);
+  z-index: 3;
+  background-color: var(--cell-selected);
+}
+
+/* Premium Board Cells */
+.cell-2L {
+  background-color: var(--cell-2L-bg);
+  color: var(--cell-2L-text);
+  font-size: 9px;
+}
+.cell-3L {
+  background-color: var(--cell-3L-bg);
+  color: var(--cell-3L-text);
+  font-size: 9px;
+}
+.cell-2W {
+  background-color: var(--cell-2W-bg);
+  color: var(--cell-2W-text);
+  font-size: 9px;
+}
+.cell-3W {
+  background-color: var(--cell-3W-bg);
+  color: var(--cell-3W-text);
+  font-size: 9px;
+}
+.cell-CENTER {
+  background-color: var(--cell-2W-bg);
+  color: var(--cell-2W-text);
+  font-size: 9px;
+}
+
+/* Placed & Preview Letter Tile */
+.cell-tile {
+  background-color: var(--cell-tile-bg);
+  color: var(--w98-text);
+  border: 1px solid var(--w98-border-dark);
+  font-size: 13px;
+  font-weight: bold;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 1px 1px 0 var(--w98-text);
+}
+
+/* Sidebar Controls & Inputs */
+.win98-input {
+  width: 100%;
+  padding: 4px;
+  font-size: 13px;
+  font-family: monospace;
+  background-color: var(--w98-surface-inset);
+  border: 2px solid;
+  border-color: var(--w98-border-dark) var(--w98-border-light)
+    var(--w98-border-light) var(--w98-border-dark);
+  box-shadow: inset 1px 1px 0px var(--w98-text);
+  text-transform: uppercase;
+  outline: none;
+}
+
+.win98-input:focus {
+  background-color: #f0f8ff;
+}
+
+.win98-button {
+  background-color: var(--w98-surface);
+  border: 2px solid;
+  border-color: var(--w98-border-light) var(--w98-border-dark)
+    var(--w98-border-dark) var(--w98-border-light);
+  box-shadow: 1px 1px 0px var(--w98-text);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  color: var(--w98-text);
+  user-select: none;
+}
+
+.win98-button:active {
+  border-color: var(--w98-border-dark) var(--w98-border-light)
+    var(--w98-border-light) var(--w98-border-dark);
+  padding: 5px 9px 3px 11px;
+  box-shadow: none;
+}
+
+.results-list {
+  max-height: 480px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--w98-surface) var(--w98-border-mid);
+}
+
+/* Retro Beveled Scrollbar */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+::-webkit-scrollbar-track {
+  background: var(--w98-border-mid);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--w98-surface);
+  border: 2px solid;
+  border-color: var(--w98-border-light) var(--w98-border-dark)
+    var(--w98-border-dark) var(--w98-border-light);
+  box-shadow: 1px 1px 0px var(--w98-text);
+}
+
+.result-card {
+  padding: 6px;
+  border-bottom: 1px solid var(--w98-border-mid);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.05s ease;
+}
+
+.result-card:hover {
+  background-color: var(--w98-highlight);
+  color: var(--w98-text-light);
+}
+
+.result-card:hover * {
+  color: var(--w98-text-light) !important;
+}
+
+.result-card:hover div[style*="color: rgb(0, 128, 0)"],
+.result-card:hover div[style*="color: #008000"] {
+  color: #55ff55 !important;
+}
+
+/* Badges */
+.badge-risk-high {
+  background: var(--cell-3W-bg);
+  color: var(--w98-text-light);
+  font-size: 9px;
+  padding: 2px 4px;
+  font-weight: bold;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.badge-risk-safe {
+  background: #2e8b57;
+  color: var(--w98-text-light);
+  font-size: 9px;
+  padding: 2px 4px;
+  font-weight: bold;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.badge-legal {
+  background-color: #2e7d32;
+  color: #ffffff;
+  font-size: 9px;
+  padding: 2px 4px;
+  font-weight: bold;
+}
+
+.badge-illegal {
+  background-color: #c62828;
+  color: #ffffff;
+  font-size: 9px;
+  padding: 2px 4px;
+  font-weight: bold;
+}
+
+.badge-dict-only {
+  background-color: #d97706;
+  color: #ffffff;
+  font-size: 9px;
+  padding: 2px 4px;
+  font-weight: bold;
+}
+
+/* Floating Tooltip Window */
+.win98-tooltip {
+  position: fixed;
+  width: 280px;
+  max-width: 90vw;
+  z-index: 99999;
+  pointer-events: none;
+  box-shadow: 2px 2px 0px var(--w98-text);
+  margin-bottom: 0;
+}
+
+.win98-tooltip-content {
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  max-height: 150px;
+  overflow-y: auto;
+  white-space: normal;
+  word-break: break-word;
+}

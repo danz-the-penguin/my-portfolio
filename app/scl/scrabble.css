@@ -1,0 +1,443 @@
+/* Windows 98 Classic Theme */
+@font-face {
+  font-family: "PixelSans";
+  src: local("MS Sans Serif"), local("Tahoma"), local("Arial");
+}
+
+/* Global Body / Background */
+.win98-body {
+  background-color: #008080; /* Classic Win98 Teal Desktop */
+  min-height: 100vh;
+  padding: 20px;
+  font-family: "PixelSans", "MS Sans Serif", Tahoma, sans-serif;
+  color: #000000;
+  box-sizing: border-box;
+}
+
+.win98-container {
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+/* Retro Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+::-webkit-scrollbar-track {
+  background: #e0e0e0;
+  border: 1px solid #808080;
+}
+::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+
+/* Classic Windows 98 Window Panel */
+.win98-window {
+  background-color: #c0c0c0;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: 1px 1px 0px #000000;
+  padding: 3px;
+  margin-bottom: 16px;
+}
+
+/* Window Title Bar */
+.win98-titlebar {
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #ffffff;
+  padding: 3px 6px;
+  font-weight: bold;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+
+.win98-titlebar-inactive {
+  background: #808080;
+  color: #ffffff;
+}
+
+.win98-titlebar-controls {
+  display: flex;
+  gap: 2px;
+}
+
+.win98-btn-titlebar {
+  width: 16px;
+  height: 14px;
+  background: #c0c0c0;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  font-size: 9px;
+  font-weight: bold;
+  line-height: 12px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+  color: #000000;
+}
+
+.win98-btn-titlebar:active {
+  border-color: #808080 #ffffff #ffffff #808080;
+  padding: 1px 0 0 1px;
+}
+
+/* Window Content Body */
+.win98-content {
+  padding: 12px;
+}
+
+/* Layout Headers */
+.win98-header-layout {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 600px) {
+  .win98-header-layout {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.win98-app-title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.win98-app-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 11px;
+}
+
+/* Inset/Sunken Box */
+.win98-inset {
+  background-color: #ffffff;
+  border: 2px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  box-shadow: inset 1px 1px 0px #000000;
+  padding: 6px;
+}
+
+/* Rack Container */
+.win98-rack-container {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  min-width: 180px;
+  min-height: 46px;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+
+.win98-rack-empty {
+  font-size: 11px;
+  color: #666666;
+}
+
+/* Grid Form Fields */
+.win98-field-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.win98-label {
+  display: block;
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+
+.win98-input {
+  width: 100%;
+  padding: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  background-color: #ffffff;
+  border: 2px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  box-shadow: inset 1px 1px 0px #000000;
+  box-sizing: border-box;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.win98-input:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -3px;
+}
+
+.win98-input-lowercase {
+  text-transform: none;
+}
+
+/* Toolbar & Sorting Control Row */
+.win98-toolbar {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.win98-toolbar-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Scrabble Tile Win98 Style */
+.win98-tile {
+  display: inline-flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 34px;
+  background-color: #ffebad;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: 1px 1px 0px #000000;
+  font-weight: bold;
+  font-size: 16px;
+  color: #000000;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.win98-tile-score {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: bold;
+  color: #555555;
+}
+
+/* Results Stack & Rows */
+.win98-results-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.win98-message-box {
+  text-align: center;
+  font-size: 12px;
+}
+
+.win98-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid #d4d0c8;
+  cursor: pointer;
+  user-select: none;
+  gap: 8px;
+}
+
+.win98-row:last-child {
+  border-bottom: none;
+}
+
+.win98-row:hover {
+  background-color: #000080;
+  color: #ffffff;
+}
+
+.win98-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.win98-row-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.win98-row-meta {
+  font-size: 10px;
+  color: #555555;
+  margin-right: 4px;
+}
+
+.win98-row:hover .win98-row-meta {
+  color: #d0d0d0;
+}
+
+.win98-row:hover .win98-inspect-link {
+  color: #ffffff;
+}
+
+.win98-score-box {
+  width: 40px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.win98-score-num {
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 14px;
+  color: inherit;
+}
+
+.win98-score-num.top-score {
+  color: #008000;
+}
+
+.win98-row:hover .win98-score-num.top-score {
+  color: #55ff55;
+}
+
+.win98-score-pts {
+  font-size: 9px;
+  display: block;
+}
+
+.win98-tile-group {
+  display: flex;
+  gap: 3px;
+}
+
+.win98-inspect-link {
+  font-size: 11px;
+  color: #000000;
+  text-decoration: underline;
+}
+
+.win98-badge-bingo {
+  background-color: #800080;
+  color: #ffffff;
+  font-size: 9px;
+  padding: 2px 4px;
+  font-weight: bold;
+}
+
+/* Retro Buttons */
+.win98-button {
+  background-color: #c0c0c0;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: 1px 1px 0px #000000;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  color: #000000;
+  user-select: none;
+}
+
+.win98-button:focus-visible {
+  outline: 1px dotted #000000;
+  outline-offset: -4px;
+}
+
+.win98-button:active,
+.win98-button.active {
+  background-color: #e0e0e0;
+  border-color: #808080 #ffffff #ffffff #808080;
+  box-shadow: inset 1px 1px 0px #000000;
+  padding: 5px 11px 3px 13px;
+}
+
+/* Status Bar */
+.win98-statusbar {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 11px;
+}
+
+.win98-statusbar-field {
+  background-color: #c0c0c0;
+  border: 1px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  padding: 2px 6px;
+  flex: 1;
+}
+
+/* Modal Window */
+.win98-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.win98-modal-dialog {
+  width: 380px;
+  max-width: 90vw;
+}
+
+.win98-modal-body {
+  min-height: 120px;
+  padding: 10px;
+}
+
+.win98-modal-footer {
+  margin-top: 10px;
+  text-align: right;
+}
+
+.win98-def-container {
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.win98-def-phonetic {
+  font-family: monospace;
+  color: #000080;
+}
+
+.win98-def-list {
+  margin: 2px 0 0 0;
+  padding-left: 16px;
+}
+
+/* Blank Tile Visual Indicator */
+.win98-tile-blank {
+  background-color: #fffde6;
+  border-style: dashed;
+}
+
+.win98-tile-blank .win98-tile-score {
+  color: #a0a0a0;
+}
+
+/* Row Hover contrast overrides */
+.win98-row:hover .win98-score-pts,
+.win98-row:hover .win98-score-num {
+  color: #ffffff;
+}
+
+.win98-button.active {
+  background-color: #d4d0c8;
+  border-style: inset;
+}

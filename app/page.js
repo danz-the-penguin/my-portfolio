@@ -64,22 +64,17 @@ const PROJECTS = [
     link: "#",
   },
   {
-    title: "Scrabble Check V1",
+    title: "Scrabble Check Lite",
     description: "scrabble",
     tags: ["html", "css"],
-    link: "https://penguins-portfolio.vercel.app/solve",
+    link: "https://penguins-portfolio.vercel.app/scl",
   },
   {
-    title: "Scrabble Check V2",
-    description: "scrabble",
+    title: "Scrabble Checker Pro",
+    description:
+      "A full-featured interactive Scrabble engine styled in a retro Windows 98 interface. Features dynamic keyboard navigation over a 15x15 board grid with premium tile multipliers (2L, 3L, 2W, 3W, Center), live previewing on hover, auto-updating rack states, and real-time strategic play ranking that evaluates total score alongside board exposure risk (e.g., exposing Triple Word scores). Optimised with useDeferredValue and O(1) set lookups to deliver non-blocking validation against external lexicons.",
     tags: ["html", "css"],
-    link: "https://penguins-portfolio.vercel.app/solve2",
-  },
-  {
-    title: "Scrabble Check V3",
-    description: "scrabble",
-    tags: ["html", "css"],
-    link: "https://penguins-portfolio.vercel.app/solve3",
+    link: "https://penguins-portfolio.vercel.app/scpro",
   },
 ];
 
