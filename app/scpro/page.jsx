@@ -264,37 +264,60 @@ const BOARD_PRESETS = {
   },
 };
 
-function UnseenTileTracker({ board, rack, activePreset }) {
+// Component: Enhanced Visual Unseen Tile Tracker
+function UnseenTileTracker({
+  board,
+  rack,
+  activePreset,
+  enableIntel,
+  intelMode,
+  manualAvailableTiles,
+}) {
   const unseen = useMemo(() => {
-    const counts = { ...activePreset.distribution };
+    let counts = {};
     let total = 0;
 
-    for (const k in counts) total += counts[k];
+    // Default: initialize all standard alphabet + blank
+    Object.keys(activePreset.distribution).forEach((k) => (counts[k] = 0));
 
-    for (let r = 0; r < 15; r++) {
-      for (let c = 0; c < 15; c++) {
-        const val = board[r][c];
-        if (val) {
-          const upper = val.toUpperCase();
-          if (counts[upper] !== undefined && counts[upper] > 0) {
-            counts[upper]--;
-            total--;
+    if (enableIntel && intelMode === "manual" && manualAvailableTiles.trim()) {
+      // Manual Paste Mode from Woogles
+      const pool = manualAvailableTiles.toUpperCase().replace(/[^A-Z?]/g, "");
+      for (let i = 0; i < pool.length; i++) {
+        const ch = pool[i];
+        counts[ch] = (counts[ch] || 0) + 1;
+        total++;
+      }
+    } else {
+      // Auto Calculation Mode (Distribution minus Board minus Rack)
+      counts = { ...activePreset.distribution };
+      for (const k in counts) total += counts[k];
+
+      for (let r = 0; r < 15; r++) {
+        for (let c = 0; c < 15; c++) {
+          const val = board[r][c];
+          if (val) {
+            const upper = val.toUpperCase();
+            if (counts[upper] !== undefined && counts[upper] > 0) {
+              counts[upper]--;
+              total--;
+            }
           }
+        }
+      }
+
+      const rackChars = rack.toUpperCase().split("");
+      for (const ch of rackChars) {
+        const mapped = ["?", ".", "0", "*", "_"].includes(ch) ? "?" : ch;
+        if (counts[mapped] !== undefined && counts[mapped] > 0) {
+          counts[mapped]--;
+          total--;
         }
       }
     }
 
-    const rackChars = rack.toUpperCase().split("");
-    for (const ch of rackChars) {
-      const mapped = ["?", ".", "0", "*", "_"].includes(ch) ? "?" : ch;
-      if (counts[mapped] !== undefined && counts[mapped] > 0) {
-        counts[mapped]--;
-        total--;
-      }
-    }
-
     return { counts, total };
-  }, [board, rack, activePreset]);
+  }, [board, rack, activePreset, enableIntel, intelMode, manualAvailableTiles]);
 
   return (
     <div
@@ -305,39 +328,63 @@ function UnseenTileTracker({ board, rack, activePreset }) {
         style={{
           fontSize: "11px",
           fontWeight: "bold",
-          marginBottom: "6px",
+          marginBottom: "8px",
           display: "flex",
           justifyContent: "space-between",
         }}
       >
-        <span>Unseen Tile Tracker (Bag + Opponent)</span>
-        <span style={{ color: "#000080" }}>Remaining: {unseen.total}</span>
+        <span>Available Tiles (Bag + Opponent)</span>
+        <span style={{ color: "#000080" }}>Total: {unseen.total}</span>
       </div>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "2px",
-          fontSize: "10px",
-        }}
-      >
-        {Object.entries(unseen.counts).map(([ch, count]) => (
-          <div
-            key={ch}
-            style={{
-              width: "22px",
-              textAlign: "center",
-              backgroundColor: count === 0 ? "#c0c0c0" : "var(--cell-tile-bg)",
-              color: count === 0 ? "#707070" : "#000",
-              border: "1px solid var(--w98-border-dark)",
-              padding: "2px 0",
-            }}
-          >
-            <strong>{ch}</strong>
-            <br />
-            {count}
-          </div>
-        ))}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 8px" }}>
+        {Object.entries(unseen.counts).map(([ch, count]) => {
+          const isZero = count === 0;
+          return (
+            <div
+              key={ch}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "2px",
+                opacity: isZero ? 0.35 : 1,
+                filter: isZero ? "grayscale(100%)" : "none",
+                transition: "opacity 0.2s ease",
+              }}
+            >
+              <div
+                className="scrabble-tile-mini"
+                style={{
+                  width: "18px",
+                  height: "22px",
+                  fontSize: "11px",
+                  boxShadow: isZero ? "none" : undefined,
+                  border: isZero ? "1px solid #999" : undefined,
+                }}
+              >
+                <span>{ch === "?" ? "" : ch}</span>
+                {ch !== "?" && (
+                  <sub
+                    className="tile-score-sub"
+                    style={{ fontSize: "7px", bottom: "0px", right: "1px" }}
+                  >
+                    {activePreset?.scores?.[ch.toLowerCase()] ?? 0}
+                  </sub>
+                )}
+              </div>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  color: "#222",
+                  minWidth: "14px",
+                }}
+              >
+                x{count}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -356,7 +403,6 @@ const BoardCell = React.memo(
     onClick,
   }) => {
     const cellClass = tileVal ? "" : premium ? `cell-${premium}` : "";
-
     return (
       <div
         className={`board-cell ${cellClass} ${isSelected ? "selected" : ""} ${
@@ -505,7 +551,7 @@ const ResultCard = React.memo(
               `• Row ${rowNum}, Col ${colLetter} (${play.dir === "H" ? "Across" : "Down"})`}
           </div>
           <div style={{ fontSize: "10px", marginTop: "3px", color: "#444" }}>
-            {isExch ? "Kept" : "Leave"}:{" "}
+            Leave:{" "}
             <strong style={{ letterSpacing: "1px" }}>{play.leave}</strong> (
             <span
               style={{
@@ -520,6 +566,22 @@ const ResultCard = React.memo(
             </span>
             )
           </div>
+
+          {/* Counter-Move / Opponent Deduction Metrics */}
+          {play.oppBestReply && (
+            <div
+              style={{
+                fontSize: "10px",
+                marginTop: "2px",
+                color: "#b71c1c",
+                fontWeight: "bold",
+              }}
+            >
+              Opp. Reply: {play.oppBestReply.word} ({play.oppBestReply.score}{" "}
+              PTS) &bull; Net:{" "}
+              {play.netSpread > 0 ? `+${play.netSpread}` : play.netSpread}
+            </div>
+          )}
         </div>
 
         <div style={{ textAlign: "right", minWidth: "90px" }}>
@@ -659,13 +721,18 @@ export default function ScrabbleSolverV3() {
   const [useSowpods, setUseSowpods] = useState(false);
   const [sortMode, setSortMode] = useState("value");
 
+  // Opponent Intel & Deduction State
+  const [enableIntel, setEnableIntel] = useState(true);
+  const [intelMode, setIntelMode] = useState("auto");
+  const [manualAvailableTiles, setManualAvailableTiles] = useState("");
+
   const [twlSet, setTwlSet] = useState(null);
   const [sowpodsSet, setSowpodsSet] = useState(null);
   const [localDictionary, setLocalDictionary] = useState({});
 
   const [loading, setLoading] = useState(true);
   const [isSolving, setIsSolving] = useState(false);
-  const [rack, setRack] = useState("ENTERHR");
+  const [rack, setRack] = useState("REOPMAJ?");
   const [candidatePlays, setCandidatePlays] = useState([]);
   const [hoveredPlay, setHoveredPlay] = useState(null);
   const [isBoardLocked, setIsBoardLocked] = useState(true);
@@ -690,7 +757,6 @@ export default function ScrabbleSolverV3() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       workerRef.current = new Worker("/solverWorker.js");
-
       workerRef.current.onmessage = (e) => {
         setCandidatePlays(e.data || []);
         setIsSolving(false);
@@ -703,18 +769,16 @@ export default function ScrabbleSolverV3() {
 
   useEffect(() => {
     let isMounted = true;
-
     const fetchList = async (paths, fallbackUrl) => {
       for (const p of paths) {
         try {
           const res = await fetch(p);
           if (res.ok) {
             const text = await res.text();
-            const words = text
+            return text
               .split("\n")
               .map((w) => w.trim().toLowerCase())
               .filter((w) => w.length >= 2 && /^[a-z]+$/.test(w));
-            if (words.length > 0) return words;
           }
         } catch {}
       }
@@ -758,7 +822,6 @@ export default function ScrabbleSolverV3() {
           setLoading(false);
         }
       } catch (err) {
-        console.error("Failed to load dictionaries", err);
         if (isMounted) setLoading(false);
       }
     };
@@ -796,8 +859,20 @@ export default function ScrabbleSolverV3() {
       useTwl,
       useSowpods,
       sortMode,
+      enableIntel,
+      manualAvailableTiles: intelMode === "manual" ? manualAvailableTiles : "",
     });
-  }, [deferredBoard, deferredRack, activePreset, useTwl, useSowpods, sortMode]);
+  }, [
+    deferredBoard,
+    deferredRack,
+    activePreset,
+    useTwl,
+    useSowpods,
+    sortMode,
+    enableIntel,
+    intelMode,
+    manualAvailableTiles,
+  ]);
 
   const handleUndo = useCallback(() => {
     setHistory((prevHistory) => {
@@ -927,7 +1002,6 @@ export default function ScrabbleSolverV3() {
   const applyPlay = useCallback(
     (play) => {
       pushHistory();
-
       if (play.dir !== "EXCH") {
         setBoard((prev) => {
           const next = prev.map((row) => [...row]);
@@ -1076,7 +1150,7 @@ export default function ScrabbleSolverV3() {
                         if (!e.target.checked && !useSowpods)
                           setUseSowpods(true);
                       }}
-                    />
+                    />{" "}
                     TWL
                   </label>
                   <label
@@ -1094,7 +1168,7 @@ export default function ScrabbleSolverV3() {
                         setUseSowpods(e.target.checked);
                         if (!e.target.checked && !useTwl) setUseTwl(true);
                       }}
-                    />
+                    />{" "}
                     SOWPODS
                   </label>
                 </div>
@@ -1123,7 +1197,7 @@ export default function ScrabbleSolverV3() {
                     onChange={(e) => setSortMode(e.target.value)}
                   >
                     <option value="value">
-                      Strategic Value (Score + Leave)
+                      Strategic Value (Score + Leave + Defense)
                     </option>
                     <option value="score">Highest Score (Greedy)</option>
                   </select>
@@ -1143,7 +1217,6 @@ export default function ScrabbleSolverV3() {
                     ? "🔒 Locked (Search)"
                     : "🔓 Unlocked (Opponent)"}
                 </button>
-
                 <button
                   className="win98-button"
                   style={{ fontWeight: "bold" }}
@@ -1156,7 +1229,6 @@ export default function ScrabbleSolverV3() {
                     ? "Across ➔ (Space to flip)"
                     : "Down ⬇ (Space to flip)"}
                 </button>
-
                 <button
                   className="win98-button"
                   style={{
@@ -1170,7 +1242,6 @@ export default function ScrabbleSolverV3() {
                 >
                   ↶ Undo
                 </button>
-
                 <button className="win98-button" onClick={clearBoard}>
                   Clear Board
                 </button>
@@ -1301,10 +1372,119 @@ export default function ScrabbleSolverV3() {
                   </div>
                 </div>
 
+                {/* Opponent Intel & Prediction Module */}
+                <div
+                  className="win98-inset"
+                  style={{ backgroundColor: "#f0f4f8" }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    <label
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: "bold",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={enableIntel}
+                        onChange={(e) => setEnableIntel(e.target.checked)}
+                      />
+                      Opponent Intel & Minimax Counter
+                    </label>
+                  </div>
+
+                  {enableIntel && (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "6px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "10px",
+                          fontSize: "10px",
+                        }}
+                      >
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="intelMode"
+                            value="auto"
+                            checked={intelMode === "auto"}
+                            onChange={() => setIntelMode("auto")}
+                          />
+                          Auto (Endgame Deduce)
+                        </label>
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="intelMode"
+                            value="manual"
+                            checked={intelMode === "manual"}
+                            onChange={() => setIntelMode("manual")}
+                          />
+                          Manual (Paste Woogles Tiles)
+                        </label>
+                      </div>
+
+                      {intelMode === "manual" && (
+                        <div>
+                          <input
+                            type="text"
+                            className="win98-input"
+                            style={{ fontSize: "11px", padding: "2px 4px" }}
+                            placeholder="Paste 'Available Tiles' from Woogles (e.g. AABCDEE...)"
+                            value={manualAvailableTiles}
+                            onChange={(e) =>
+                              setManualAvailableTiles(
+                                e.target.value
+                                  .toUpperCase()
+                                  .replace(/[^A-Z?]/g, ""),
+                              )
+                            }
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* NEW VISUAL UNSEEN TILE TRACKER */}
                 <UnseenTileTracker
                   board={board}
                   rack={rack}
                   activePreset={activePreset}
+                  enableIntel={enableIntel}
+                  intelMode={intelMode}
+                  manualAvailableTiles={manualAvailableTiles}
                 />
 
                 <div className="win98-window" style={{ flex: 1, margin: 0 }}>
@@ -1328,7 +1508,7 @@ export default function ScrabbleSolverV3() {
                       >
                         {loading
                           ? "Loading Lexicons..."
-                          : "Calculating Best Plays..."}
+                          : "Calculating Best Plays & Counter-Responses..."}
                       </div>
                     ) : candidatePlays.length === 0 ? (
                       <div
