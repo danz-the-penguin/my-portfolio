@@ -1,4 +1,4 @@
-// solverWorker.js - Zero-GC Binary GADDAG Engine
+// solverWorker.js - Zero-GC Binary GADDAG + HastyBot Leave Equity Engine
 
 const REV_CODE = 26; // '#' Reversal separator
 const MAX_RESULTS = 8192;
@@ -6,9 +6,42 @@ const MAX_RESULTS = 8192;
 let gaddagTwl = null;
 let gaddagSowpods = null;
 
+// Tournament Base Leave Equity (scaled in 0.1 pts)
+// Derived from Quackle / Elise / HastyBot simulation models
+const BASE_LEAVE_EQUITY = new Int16Array([
+  15, // A (+1.5)
+  -20, // B (-2.0)
+  -5, // C (-0.5)
+  10, // D (+1.0)
+  30, // E (+3.0)
+  -20, // F (-2.0)
+  -15, // G (-1.5)
+  -10, // H (-1.0)
+  12, // I (+1.2)
+  -25, // J (-2.5)
+  -25, // K (-2.5)
+  12, // L (+1.2)
+  -5, // M (-0.5)
+  20, // N (+2.0)
+  -5, // O (-0.5)
+  -10, // P (-1.0)
+  -75, // Q (-7.5)
+  32, // R (+3.2)
+  80, // S (+8.0)
+  25, // T (+2.5)
+  -30, // U (-3.0)
+  -55, // V (-5.5)
+  -25, // W (-2.5)
+  35, // X (+3.5)
+  0, // Y ( 0.0)
+  20, // Z (+2.0)
+]);
+const BLANK_LEAVE_EQUITY = 255; // ? (+25.5)
+
 // Static pre-allocated module buffers
 const RACK_COUNTS = new Int8Array(26);
 const SCORE_TABLE = new Int8Array(26);
+const REMAINING_COUNTS = new Int8Array(26);
 
 const PREMIUM_GRID = new Uint8Array(225);
 const BOARD_GRID = new Int8Array(225);
@@ -26,7 +59,6 @@ const PERP_BUF = new Uint8Array(15);
 const PLACED_LETTERS = new Int8Array(15);
 const PLACED_IS_BLANK = new Uint8Array(15);
 
-// Reusable line vector working buffers
 const LINE_TILES = new Int8Array(15);
 const LINE_ANCHORS = new Uint8Array(15);
 const LINE_CROSS_MASKS = new Uint32Array(15);
@@ -38,10 +70,14 @@ let resultsCount = 0;
 const RES_WORD_LEN = new Uint8Array(MAX_RESULTS);
 const RES_WORD_CHARS = new Uint8Array(MAX_RESULTS * 15);
 const RES_SCORE = new Int16Array(MAX_RESULTS);
+const RES_EQUITY = new Float32Array(MAX_RESULTS);
+const RES_TOTAL_VAL = new Float32Array(MAX_RESULTS);
 const RES_ROW = new Uint8Array(MAX_RESULTS);
 const RES_COL = new Uint8Array(MAX_RESULTS);
 const RES_DIR = new Uint8Array(MAX_RESULTS); // 0 = H, 1 = V
 const RES_EXPOSES_3W = new Uint8Array(MAX_RESULTS);
+const RES_LEAVE_CHARS = new Uint8Array(MAX_RESULTS * 7);
+const RES_LEAVE_LEN = new Uint8Array(MAX_RESULTS);
 
 const INDEX_ARRAY = new Uint16Array(MAX_RESULTS);
 const ALL_LETTERS_MASK = 0x03ffffff;
@@ -109,7 +145,7 @@ function isWordValidCodes(gaddag, buf, len) {
     while (childPointer !== 0) {
       const entry = gaddag[childPointer];
       if ((entry & 0x1f) === targetCode) {
-        if (i === len - 1) return (entry & 0x20) !== 0; // isTerminal
+        if (i === len - 1) return (entry & 0x20) !== 0;
         nodeIdx = childPointer;
         matched = true;
         break;
@@ -120,6 +156,60 @@ function isWordValidCodes(gaddag, buf, len) {
     if (!matched) return false;
   }
   return false;
+}
+
+// Strategic Leave Valuation Model
+function evaluateLeaveEquity(counts, blanksRemaining) {
+  let equity = blanksRemaining * BLANK_LEAVE_EQUITY;
+  let vowels = 0;
+  let consonants = 0;
+  let totalTiles = blanksRemaining;
+
+  for (let c = 0; c < 26; c++) {
+    const count = counts[c];
+    if (count === 0) continue;
+
+    totalTiles += count;
+    equity += count * BASE_LEAVE_EQUITY[c];
+
+    // Vowel vs Consonant tracking
+    if (c === 0 || c === 4 || c === 8 || c === 14 || c === 20) {
+      vowels += count;
+    } else {
+      consonants += count;
+    }
+
+    // Duplicate Tile Penalties
+    if (count > 1) {
+      equity -= (count - 1) * 20;
+      if (c === 8 || c === 14 || c === 20) equity -= (count - 1) * 15; // Extra penalty for duplicate I/O/U
+    }
+  }
+
+  if (totalTiles === 0) return 0; // Bingo / Empty leave
+
+  // Vowel/Consonant Ratio Adjustments
+  if (vowels === 0 && consonants > 0) {
+    equity -= consonants * 25; // Harsh penalty for vowel-less leaves
+  } else if (consonants === 0 && vowels > 1) {
+    equity -= vowels * 30; // Harsh penalty for all-vowel leaves
+  } else if (vowels === 2 && consonants === 2) {
+    equity += 15; // Balanced 2V/2C bonus
+  } else if (vowels === 2 && consonants === 3) {
+    equity += 12; // Balanced 2V/3C bonus
+  }
+
+  // Q without U penalty
+  if (counts[16] > 0 && counts[20] === 0 && blanksRemaining === 0) {
+    equity -= 45;
+  }
+
+  // High-synergy bingo suffixes (ER, IN, ST)
+  if (counts[4] > 0 && counts[17] > 0) equity += 12; // E + R
+  if (counts[8] > 0 && counts[13] > 0) equity += 10; // I + N
+  if (counts[18] > 0 && counts[19] > 0) equity += 15; // S + T
+
+  return equity / 10.0;
 }
 
 self.onmessage = async function (e) {
@@ -154,13 +244,14 @@ self.onmessage = async function (e) {
   HAS_PERP_GRID_H.fill(0);
 
   // 2. Parse rack without string allocation
-  let wildcards = 0;
+  let initialWildcards = 0;
   for (let i = 0; i < rack.length; i++) {
     const code = rack.charCodeAt(i);
     if (code >= 97 && code <= 122) RACK_COUNTS[code - 97]++;
     else if (code >= 65 && code <= 90) RACK_COUNTS[code - 65]++;
-    else wildcards++;
+    else initialWildcards++;
   }
+  let wildcards = initialWildcards;
 
   for (let i = 0; i < 26; i++) {
     const lower = String.fromCharCode(97 + i);
@@ -198,7 +289,7 @@ self.onmessage = async function (e) {
     IS_ANCHOR_SQUARE[7 * 15 + 7] = 1;
   }
 
-  // 4. Precompute cross-checks directly into integer buffers
+  // 4. Precompute cross-checks
   for (let r = 0; r < 15; r++) {
     for (let c = 0; c < 15; c++) {
       const gridIdx = r * 15 + c;
@@ -288,7 +379,7 @@ self.onmessage = async function (e) {
     }
   }
 
-  // 5. Zero-allocation vector search
+  // 5. Zero-allocation vector search + Leave Valuation
   const recordPlay = (startPos, endPos, rackUsed, isVertical, lineIdx) => {
     if (resultsCount >= MAX_RESULTS) return;
 
@@ -299,6 +390,10 @@ self.onmessage = async function (e) {
 
     const charOffset = resultsCount * 15;
     let wordLen = 0;
+
+    // Reset remaining rack counts
+    for (let k = 0; k < 26; k++) REMAINING_COUNTS[k] = RACK_COUNTS[k];
+    let blanksLeft = initialWildcards;
 
     for (let p = startPos; p <= endPos; p++) {
       const charCode = PLACED_LETTERS[p];
@@ -315,6 +410,12 @@ self.onmessage = async function (e) {
       if (isExisting) {
         mainWordScore += SCORE_TABLE[charCode];
       } else {
+        if (isBlank) {
+          blanksLeft--;
+        } else {
+          REMAINING_COUNTS[charCode]--;
+        }
+
         let letterVal = isBlank ? 0 : SCORE_TABLE[charCode];
         if (premium === 1) letterVal *= 2;
         else if (premium === 2) letterVal *= 3;
@@ -354,8 +455,31 @@ self.onmessage = async function (e) {
     let totalScore = mainWordScore * mainWordMult + crossScoreTotal;
     if (rackUsed === 7) totalScore += bingoBonus;
 
+    // Calculate Strategic Leave Value
+    const leaveEquity = evaluateLeaveEquity(REMAINING_COUNTS, blanksLeft);
+    const totalPlayValue = totalScore + leaveEquity;
+
+    // Store leave string bytes
+    const leaveOffset = resultsCount * 7;
+    let leaveLen = 0;
+    for (let k = 0; k < blanksLeft; k++) {
+      RES_LEAVE_CHARS[leaveOffset + leaveLen] = 63; // '?'
+      leaveLen++;
+    }
+    for (let k = 0; k < 26; k++) {
+      for (let count = 0; count < REMAINING_COUNTS[k]; count++) {
+        if (leaveLen < 7) {
+          RES_LEAVE_CHARS[leaveOffset + leaveLen] = 65 + k;
+          leaveLen++;
+        }
+      }
+    }
+
     RES_WORD_LEN[resultsCount] = wordLen;
     RES_SCORE[resultsCount] = totalScore;
+    RES_EQUITY[resultsCount] = leaveEquity;
+    RES_TOTAL_VAL[resultsCount] = totalPlayValue;
+    RES_LEAVE_LEN[resultsCount] = leaveLen;
     RES_ROW[resultsCount] = isVertical ? startPos : lineIdx;
     RES_COL[resultsCount] = isVertical ? lineIdx : startPos;
     RES_DIR[resultsCount] = isVertical ? 1 : 0;
@@ -497,14 +621,14 @@ self.onmessage = async function (e) {
     searchVector(true, i);
   }
 
-  // 6. In-place index sorting and deferred postMessage object creation
+  // 6. Sort plays by Strategic HastyBot Value (Score + Leave Equity)
   for (let i = 0; i < resultsCount; i++) INDEX_ARRAY[i] = i;
 
   const validSlice = INDEX_ARRAY.subarray(0, resultsCount);
   validSlice.sort((a, b) => {
-    const sDiff = RES_SCORE[b] - RES_SCORE[a];
-    if (sDiff !== 0) return sDiff;
-    return RES_WORD_LEN[b] - RES_WORD_LEN[a];
+    const vDiff = RES_TOTAL_VAL[b] - RES_TOTAL_VAL[a];
+    if (Math.abs(vDiff) > 0.001) return vDiff;
+    return RES_SCORE[b] - RES_SCORE[a];
   });
 
   const finalPlays = [];
@@ -549,9 +673,20 @@ self.onmessage = async function (e) {
       wordStr += String.fromCharCode(65 + RES_WORD_CHARS[charOffset + k]);
     }
 
+    const leaveOffset = idx * 7;
+    const leaveLen = RES_LEAVE_LEN[idx];
+    let leaveStr = "";
+    for (let k = 0; k < leaveLen; k++) {
+      leaveStr += String.fromCharCode(RES_LEAVE_CHARS[leaveOffset + k]);
+    }
+    if (leaveStr.length === 0) leaveStr = "None";
+
     finalPlays.push({
       word: wordStr,
       score: RES_SCORE[idx],
+      leaveEquity: Math.round(RES_EQUITY[idx] * 10) / 10,
+      totalVal: Math.round(RES_TOTAL_VAL[idx] * 10) / 10,
+      leave: leaveStr,
       row,
       col,
       dir,

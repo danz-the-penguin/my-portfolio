@@ -441,7 +441,9 @@ const BoardCell = React.memo(
 
     return (
       <div
-        className={`board-cell ${cellClass} ${isSelected ? "selected" : ""} ${isInActiveLine && !isSelected ? "in-line-highlight" : ""}`}
+        className={`board-cell ${cellClass} ${isSelected ? "selected" : ""} ${
+          isInActiveLine && !isSelected ? "in-line-highlight" : ""
+        }`}
         onClick={onClick}
         style={{
           position: "relative",
@@ -728,7 +730,7 @@ export default function ScrabbleSolverV3() {
       );
 
       workerRef.current.onmessage = (e) => {
-        setCandidatePlays(e.data);
+        setCandidatePlays(e.data || []);
         setIsSolving(false);
       };
     }
@@ -739,6 +741,8 @@ export default function ScrabbleSolverV3() {
 
   // Preload text wordlists for Referee and definition checking
   useEffect(() => {
+    let isMounted = true;
+
     const fetchList = async (paths, fallbackUrl) => {
       for (const p of paths) {
         try {
@@ -782,12 +786,17 @@ export default function ScrabbleSolverV3() {
         ),
       ]);
 
-      setSowpodsSet(new Set(sow));
-      setTwlSet(new Set(twl));
-      setLoading(false);
+      if (isMounted) {
+        setSowpodsSet(new Set(sow));
+        setTwlSet(new Set(twl));
+        setLoading(false);
+      }
     };
 
     loadAll();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handlePresetChange = (key) => {
@@ -832,7 +841,11 @@ export default function ScrabbleSolverV3() {
     });
   }, []);
 
-  // Direct Arrow Movement & Dedicated Direction Toggling (Spacebar/Button Only)
+  const pushHistory = useCallback(() => {
+    setHistory((prev) => [...prev.slice(-49), { board, rack }]);
+  }, [board, rack]);
+
+  // Keyboard navigation & board input
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
@@ -858,22 +871,22 @@ export default function ScrabbleSolverV3() {
         return;
       }
 
-      if (e.key >= "a" && e.key <= "z") {
-        setHistory((prev) => [...prev, { board, rack }]);
+      if (/^[a-zA-Z]$/.test(e.key)) {
+        pushHistory();
         setBoard((prev) => {
           const next = prev.map((row) => [...row]);
           next[r][c] = e.key.toUpperCase();
           return next;
         });
 
-        if (typingDir === "H") {
-          if (c < 14) setSelectedCell([r, c + 1]);
-        } else {
-          if (r < 14) setSelectedCell([r + 1, c]);
+        if (typingDir === "H" && c < 14) {
+          setSelectedCell([r, c + 1]);
+        } else if (typingDir === "V" && r < 14) {
+          setSelectedCell([r + 1, c]);
         }
       } else if (e.key === "Backspace") {
         if (board[r][c]) {
-          setHistory((prev) => [...prev, { board, rack }]);
+          pushHistory();
           setBoard((prev) => {
             const next = prev.map((row) => [...row]);
             next[r][c] = "";
@@ -882,7 +895,7 @@ export default function ScrabbleSolverV3() {
         } else {
           if (typingDir === "H" && c > 0) {
             setSelectedCell([r, c - 1]);
-            setHistory((prev) => [...prev, { board, rack }]);
+            pushHistory();
             setBoard((prev) => {
               const next = prev.map((row) => [...row]);
               next[r][c - 1] = "";
@@ -890,7 +903,7 @@ export default function ScrabbleSolverV3() {
             });
           } else if (typingDir === "V" && r > 0) {
             setSelectedCell([r - 1, c]);
-            setHistory((prev) => [...prev, { board, rack }]);
+            pushHistory();
             setBoard((prev) => {
               const next = prev.map((row) => [...row]);
               next[r - 1][c] = "";
@@ -899,7 +912,7 @@ export default function ScrabbleSolverV3() {
           }
         }
       } else if (e.key === "Delete") {
-        setHistory((prev) => [...prev, { board, rack }]);
+        pushHistory();
         setBoard((prev) => {
           const next = prev.map((row) => [...row]);
           next[r][c] = "";
@@ -922,17 +935,17 @@ export default function ScrabbleSolverV3() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedCell, isBoardLocked, typingDir, board, rack, handleUndo]);
+  }, [selectedCell, isBoardLocked, typingDir, board, handleUndo, pushHistory]);
 
-  const clearBoard = () => {
-    setHistory((prev) => [...prev, { board, rack }]);
+  const clearBoard = useCallback(() => {
+    pushHistory();
     setBoard(
       Array(15)
         .fill(null)
         .map(() => Array(15).fill("")),
     );
     setHoveredPlay(null);
-  };
+  }, [pushHistory]);
 
   const previewMap = useMemo(() => {
     if (!hoveredPlay) return {};
@@ -948,7 +961,7 @@ export default function ScrabbleSolverV3() {
 
   const applyPlay = useCallback(
     (play) => {
-      setHistory((prev) => [...prev, { board, rack }]);
+      pushHistory();
 
       setBoard((prev) => {
         const next = prev.map((row) => [...row]);
@@ -971,13 +984,8 @@ export default function ScrabbleSolverV3() {
             if (idx !== -1) {
               currentRack.splice(idx, 1);
             } else {
-              const wildcardIdx = currentRack.findIndex(
-                (ch) =>
-                  ch === "?" ||
-                  ch === "." ||
-                  ch === "0" ||
-                  ch === "*" ||
-                  ch === "_",
+              const wildcardIdx = currentRack.findIndex((ch) =>
+                ["?", ".", "0", "*", "_"].includes(ch),
               );
               if (wildcardIdx !== -1) currentRack.splice(wildcardIdx, 1);
             }
@@ -988,7 +996,7 @@ export default function ScrabbleSolverV3() {
 
       setHoveredPlay(null);
     },
-    [board, rack],
+    [board, pushHistory],
   );
 
   const handleCellClick = useCallback(
@@ -1017,6 +1025,11 @@ export default function ScrabbleSolverV3() {
   const handleLeavePlay = useCallback(() => {
     setHoveredPlay(null);
   }, []);
+
+  const handleRackChange = (val) => {
+    const sanitized = val.toUpperCase().replace(/[^A-Z?.*_0]/g, "");
+    setRack(sanitized);
+  };
 
   return (
     <div className="win98-body">
@@ -1256,7 +1269,7 @@ export default function ScrabbleSolverV3() {
                     type="text"
                     className="win98-input"
                     value={rack}
-                    onChange={(e) => setRack(e.target.value.toUpperCase())}
+                    onChange={(e) => handleRackChange(e.target.value)}
                     placeholder="E.g. REOPMAJ? or ? for blank"
                   />
 
