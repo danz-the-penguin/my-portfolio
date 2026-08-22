@@ -692,11 +692,6 @@ export default function ScrabbleSolverV3() {
   // Dictionary Toggles
   const [useTwl, setUseTwl] = useState(true);
   const [useSowpods, setUseSowpods] = useState(false);
-  const [useJsonDict, setUseJsonDict] = useState(true);
-
-  const [twlWords, setTwlWords] = useState([]);
-  const [sowpodsWords, setSowpodsWords] = useState([]);
-  const [jsonWords, setJsonWords] = useState([]);
 
   const [twlSet, setTwlSet] = useState(null);
   const [sowpodsSet, setSowpodsSet] = useState(null);
@@ -742,13 +737,8 @@ export default function ScrabbleSolverV3() {
     };
   }, []);
 
-  // Load Lexicons safely
+  // Preload text wordlists for Referee and definition checking
   useEffect(() => {
-    const rawJson = Object.keys(localDictionary)
-      .map((w) => w.trim().toLowerCase())
-      .filter((w) => w.length >= 2 && /^[a-z]+$/.test(w));
-    setJsonWords(rawJson);
-
     const fetchList = async (paths, fallbackUrl) => {
       for (const p of paths) {
         try {
@@ -761,9 +751,7 @@ export default function ScrabbleSolverV3() {
               .filter((w) => w.length >= 2 && /^[a-z]+$/.test(w));
             if (words.length > 0) return words;
           }
-        } catch {
-          // Try next
-        }
+        } catch {}
       }
       if (fallbackUrl) {
         try {
@@ -794,12 +782,8 @@ export default function ScrabbleSolverV3() {
         ),
       ]);
 
-      setSowpodsWords(sow);
       setSowpodsSet(new Set(sow));
-
-      setTwlWords(twl);
       setTwlSet(new Set(twl));
-
       setLoading(false);
     };
 
@@ -818,16 +802,9 @@ export default function ScrabbleSolverV3() {
     }
   };
 
-  const workerWordList = useMemo(() => {
-    let list = [];
-    if (useTwl) list = list.concat(twlWords);
-    if (useSowpods) list = list.concat(sowpodsWords);
-    if (useJsonDict) list = list.concat(jsonWords);
-    return Array.from(new Set(list));
-  }, [useTwl, useSowpods, useJsonDict, twlWords, sowpodsWords, jsonWords]);
-
+  // Dispatch to GADDAG Binary Worker
   useEffect(() => {
-    if (!deferredRack.trim() || workerWordList.length === 0) {
+    if (!deferredRack.trim()) {
       setCandidatePlays([]);
       setIsSolving(false);
       return;
@@ -837,10 +814,11 @@ export default function ScrabbleSolverV3() {
     workerRef.current?.postMessage({
       rack: deferredRack,
       board: deferredBoard,
-      wordList: workerWordList,
       activePreset,
+      useTwl,
+      useSowpods,
     });
-  }, [deferredBoard, deferredRack, workerWordList, activePreset]);
+  }, [deferredBoard, deferredRack, activePreset, useTwl, useSowpods]);
 
   // Undo Handler
   const handleUndo = useCallback(() => {
@@ -874,14 +852,12 @@ export default function ScrabbleSolverV3() {
       if (!selectedCell) return;
       const [r, c] = selectedCell;
 
-      // 1. Spacebar exclusively toggles orientation in place
       if (e.key === " ") {
         e.preventDefault();
         setTypingDir((d) => (d === "H" ? "V" : "H"));
         return;
       }
 
-      // 2. Letters place and auto-advance in the active direction
       if (e.key >= "a" && e.key <= "z") {
         setHistory((prev) => [...prev, { board, rack }]);
         setBoard((prev) => {
@@ -895,9 +871,7 @@ export default function ScrabbleSolverV3() {
         } else {
           if (r < 14) setSelectedCell([r + 1, c]);
         }
-      }
-      // 3. Backspace & Delete
-      else if (e.key === "Backspace") {
+      } else if (e.key === "Backspace") {
         if (board[r][c]) {
           setHistory((prev) => [...prev, { board, rack }]);
           setBoard((prev) => {
@@ -931,9 +905,7 @@ export default function ScrabbleSolverV3() {
           next[r][c] = "";
           return next;
         });
-      }
-      // 4. Arrow keys ALWAYS immediately move cursor up/down/left/right
-      else if (e.key === "ArrowRight") {
+      } else if (e.key === "ArrowRight") {
         e.preventDefault();
         if (c < 14) setSelectedCell([r, c + 1]);
       } else if (e.key === "ArrowLeft") {
@@ -1027,13 +999,11 @@ export default function ScrabbleSolverV3() {
         if (!prev) return [r, c];
         const [prevR, prevC] = prev;
 
-        // Clicking the already-selected cell toggles direction
         if (prevR === r && prevC === c) {
           setTypingDir((d) => (d === "H" ? "V" : "H"));
           return [r, c];
         }
 
-        // Clicking a different cell moves cursor without altering direction
         return [r, c];
       });
     },
@@ -1129,7 +1099,11 @@ export default function ScrabbleSolverV3() {
                     <input
                       type="checkbox"
                       checked={useTwl}
-                      onChange={(e) => setUseTwl(e.target.checked)}
+                      onChange={(e) => {
+                        setUseTwl(e.target.checked);
+                        if (!e.target.checked && !useSowpods)
+                          setUseSowpods(true);
+                      }}
                     />
                     TWL
                   </label>
@@ -1144,24 +1118,12 @@ export default function ScrabbleSolverV3() {
                     <input
                       type="checkbox"
                       checked={useSowpods}
-                      onChange={(e) => setUseSowpods(e.target.checked)}
+                      onChange={(e) => {
+                        setUseSowpods(e.target.checked);
+                        if (!e.target.checked && !useTwl) setUseTwl(true);
+                      }}
                     />
                     SOWPODS
-                  </label>
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "3px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={useJsonDict}
-                      onChange={(e) => setUseJsonDict(e.target.checked)}
-                    />
-                    JSON Dict
                   </label>
                 </div>
               </div>

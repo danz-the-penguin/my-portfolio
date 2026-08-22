@@ -1,18 +1,58 @@
-// app/solve/solverWorker.js
+// solverWorker.js
 
-self.onmessage = function (e) {
-  const { rack, board, wordList, activePreset } = e.data;
-  if (!rack || !wordList || wordList.length === 0 || !activePreset) {
+const REV_CODE = 26; // '#' Reversal separator
+let gaddagTwl = null;
+let gaddagSowpods = null;
+
+// Preload binary buffers
+async function loadGaddags() {
+  try {
+    const [twlRes, sowpodsRes] = await Promise.all([
+      fetch("/gaddag_twl.bin"),
+      fetch("/gaddag_sowpods.bin"),
+    ]);
+
+    if (twlRes.ok) {
+      const buf = await twlRes.arrayBuffer();
+      gaddagTwl = new Uint32Array(buf);
+    }
+    if (sowpodsRes.ok) {
+      const buf = await sowpodsRes.arrayBuffer();
+      gaddagSowpods = new Uint32Array(buf);
+    }
+  } catch (err) {
+    console.error("Failed to load binary GADDAG files in worker:", err);
+  }
+}
+const loadPromise = loadGaddags();
+
+self.onmessage = async function (e) {
+  await loadPromise;
+
+  const { rack, board, activePreset, useTwl, useSowpods } = e.data;
+  if (!rack || !activePreset) {
+    self.postMessage([]);
+    return;
+  }
+
+  const gaddag = useTwl ? gaddagTwl : useSowpods ? gaddagSowpods : gaddagTwl;
+  if (!gaddag) {
     self.postMessage([]);
     return;
   }
 
   const { scores = {}, premiums = {}, bingoBonus = 50 } = activePreset;
 
-  // 1. Clean rack & count tiles / wildcards
+  // 1. Rack parsing
   const WILDCARD_REGEX = /[\?\.\*0_\s]/g;
   const cleanRack = rack.toLowerCase().replace(WILDCARD_REGEX, "");
-  const wildcards = (rack.match(WILDCARD_REGEX) || []).length;
+  let wildcards = (rack.match(WILDCARD_REGEX) || []).length;
+
+  const rackCounts = new Int8Array(26);
+  for (let i = 0; i < cleanRack.length; i++) {
+    const code = cleanRack.charCodeAt(i) - 97;
+    if (code >= 0 && code < 26) rackCounts[code]++;
+  }
 
   const scoreTable = new Int8Array(26);
   for (let i = 0; i < 26; i++) {
@@ -21,7 +61,7 @@ self.onmessage = function (e) {
     scoreTable[i] = scores[lower] ?? scores[upper] ?? 0;
   }
 
-  // 2. Flatten premium grid: 0: None, 1: 2L, 2: 3L, 3: 2W/CENTER, 4: 3W
+  // 2. Premium Grid Flattening
   const premiumGrid = new Uint8Array(225);
   for (let r = 0; r < 15; r++) {
     for (let c = 0; c < 15; c++) {
@@ -33,69 +73,24 @@ self.onmessage = function (e) {
     }
   }
 
-  // 3. Board flattening & tile counts
+  // 3. Board Grid Flattening
   const boardGrid = new Int8Array(225);
   let hasBoardTiles = false;
-  const maxAvailable = new Int8Array(26);
-  const rackCounts = new Int8Array(26);
-
-  for (let i = 0; i < cleanRack.length; i++) {
-    const code = cleanRack.charCodeAt(i) - 97;
-    if (code >= 0 && code < 26) {
-      rackCounts[code]++;
-      maxAvailable[code]++;
-    }
-  }
 
   for (let r = 0; r < 15; r++) {
     for (let c = 0; c < 15; c++) {
       const val = board[r]?.[c];
       if (val && typeof val === "string") {
-        const char = val.toLowerCase();
-        const code = char.charCodeAt(0) - 97;
+        const code = val.toLowerCase().charCodeAt(0) - 97;
         if (code >= 0 && code < 26) {
           boardGrid[r * 15 + c] = code + 1; // 1-based (1 = 'a')
           hasBoardTiles = true;
-          maxAvailable[code]++;
         }
       }
     }
   }
 
-  const isCenterCovered = boardGrid[7 * 15 + 7] !== 0;
-
-  // 4. Build word set and filter viable candidates
-  const wordSet = new Set();
-  const viableWords = [];
-
-  for (let i = 0; i < wordList.length; i++) {
-    const rawWord = wordList[i];
-    const w = typeof rawWord === "string" ? rawWord.trim().toLowerCase() : "";
-    if (w.length < 2 || w.length > 15) continue;
-    wordSet.add(w);
-
-    let missing = 0;
-    const wCounts = new Int8Array(26);
-    let isViable = true;
-    for (let j = 0; j < w.length; j++) {
-      const idx = w.charCodeAt(j) - 97;
-      if (idx < 0 || idx >= 26) {
-        isViable = false;
-        break;
-      }
-      wCounts[idx]++;
-      if (wCounts[idx] > maxAvailable[idx]) {
-        missing++;
-        if (missing > wildcards) {
-          isViable = false;
-          break;
-        }
-      }
-    }
-    if (isViable) viableWords.push(w);
-  }
-
-  // 5. Precalculate 32-bit Bitmask Cross-Checks and Anchor Map
+  // 4. Precompute Cross-Checks & Anchors
   const crossMaskV = new Uint32Array(225);
   const crossScoreBaseV = new Int16Array(225);
   const hasPerpGridV = new Uint8Array(225);
@@ -105,23 +100,73 @@ self.onmessage = function (e) {
   const hasPerpGridH = new Uint8Array(225);
 
   const isAnchorSquare = new Uint8Array(225);
-  const rowHasAnchors = new Uint8Array(15);
-  const colHasAnchors = new Uint8Array(15);
-
-  const ALL_LETTERS_MASK = 0x03ffffff; // Bits 0-25 set to 1
+  const ALL_LETTERS_MASK = 0x03ffffff;
 
   if (!hasBoardTiles) {
     isAnchorSquare[7 * 15 + 7] = 1;
-    rowHasAnchors[7] = 1;
-    colHasAnchors[7] = 1;
   }
+
+  // Fast GADDAG lookup for perpendicular cross-checks
+  const isWordValid = (str) => {
+    if (str.length < 2) return false;
+    const firstCode = str.charCodeAt(0) - 97;
+    let nodeIdx = 0;
+    let childPointer = gaddag[nodeIdx] >>> 7;
+
+    // Step 1: Match first character
+    let foundFirst = false;
+    while (childPointer !== 0) {
+      const entry = gaddag[childPointer];
+      if ((entry & 0x1f) === firstCode) {
+        nodeIdx = childPointer;
+        foundFirst = true;
+        break;
+      }
+      if ((entry & 0x40) === 0) break;
+      childPointer++;
+    }
+    if (!foundFirst) return false;
+
+    // Step 2: Match REV separator '#'
+    childPointer = gaddag[nodeIdx] >>> 7;
+    let foundRev = false;
+    while (childPointer !== 0) {
+      const entry = gaddag[childPointer];
+      if ((entry & 0x1f) === REV_CODE) {
+        nodeIdx = childPointer;
+        foundRev = true;
+        break;
+      }
+      if ((entry & 0x40) === 0) break;
+      childPointer++;
+    }
+    if (!foundRev) return false;
+
+    // Step 3: Match remaining characters
+    for (let i = 1; i < str.length; i++) {
+      const targetCode = str.charCodeAt(i) - 97;
+      childPointer = gaddag[nodeIdx] >>> 7;
+      let matched = false;
+      while (childPointer !== 0) {
+        const entry = gaddag[childPointer];
+        if ((entry & 0x1f) === targetCode) {
+          if (i === str.length - 1) return (entry & 0x20) !== 0; // isTerminal
+          nodeIdx = childPointer;
+          matched = true;
+          break;
+        }
+        if ((entry & 0x40) === 0) break;
+        childPointer++;
+      }
+      if (!matched) return false;
+    }
+    return false;
+  };
 
   for (let r = 0; r < 15; r++) {
     for (let c = 0; c < 15; c++) {
       const gridIdx = r * 15 + c;
-
       if (boardGrid[gridIdx] !== 0) {
-        // Mark orthogonally adjacent empty cells as anchors
         const neighbors = [
           r > 0 ? (r - 1) * 15 + c : -1,
           r < 14 ? (r + 1) * 15 + c : -1,
@@ -130,13 +175,7 @@ self.onmessage = function (e) {
         ];
         for (let n = 0; n < 4; n++) {
           const nIdx = neighbors[n];
-          if (nIdx !== -1 && boardGrid[nIdx] === 0) {
-            isAnchorSquare[nIdx] = 1;
-            const nr = Math.floor(nIdx / 15);
-            const nc = nIdx % 15;
-            rowHasAnchors[nr] = 1;
-            colHasAnchors[nc] = 1;
-          }
+          if (nIdx !== -1 && boardGrid[nIdx] === 0) isAnchorSquare[nIdx] = 1;
         }
         continue;
       }
@@ -166,7 +205,7 @@ self.onmessage = function (e) {
         let mask = 0;
         for (let code = 0; code < 26; code++) {
           const testWord = prefixV + String.fromCharCode(97 + code) + suffixV;
-          if (wordSet.has(testWord)) mask |= 1 << code;
+          if (isWordValid(testWord)) mask |= 1 << code;
         }
         crossMaskV[gridIdx] = mask;
       } else {
@@ -198,7 +237,7 @@ self.onmessage = function (e) {
         let mask = 0;
         for (let code = 0; code < 26; code++) {
           const testWord = prefixH + String.fromCharCode(97 + code) + suffixH;
-          if (wordSet.has(testWord)) mask |= 1 << code;
+          if (isWordValid(testWord)) mask |= 1 << code;
         }
         crossMaskH[gridIdx] = mask;
       } else {
@@ -207,170 +246,237 @@ self.onmessage = function (e) {
     }
   }
 
-  // 6. Vector Scan Engine
+  // 5. Zero-Allocation GADDAG Generator
   const results = [];
-  const tempCounts = new Int8Array(26);
+  const placedLetters = new Int8Array(15);
+  const placedIsBlank = new Uint8Array(15);
 
-  const processVector = (isVertical, index) => {
-    // Fast line skip if this line cannot form an anchor connection
-    if (isVertical && colHasAnchors[index] === 0) return;
-    if (!isVertical && rowHasAnchors[index] === 0) return;
-
+  const searchVector = (isVertical, lineIdx) => {
     const crossMask = isVertical ? crossMaskH : crossMaskV;
     const crossScoreBase = isVertical ? crossScoreBaseH : crossScoreBaseV;
     const hasPerpGrid = isVertical ? hasPerpGridH : hasPerpGridV;
 
-    for (let wIdx = 0; wIdx < viableWords.length; wIdx++) {
-      const w = viableWords[wIdx];
-      const wLen = w.length;
-      const maxPos = 15 - wLen;
+    const lineTiles = new Int8Array(15);
+    const lineAnchors = new Uint8Array(15);
+    const linePremiums = new Uint8Array(15);
+    const lineCrossMasks = new Uint32Array(15);
+    const lineCrossScores = new Int16Array(15);
+    const lineHasPerp = new Uint8Array(15);
 
-      for (let pos = 0; pos <= maxPos; pos++) {
-        const startR = isVertical ? pos : index;
-        const startC = isVertical ? index : pos;
-        const endR = isVertical ? pos + wLen - 1 : index;
-        const endC = isVertical ? index : pos + wLen - 1;
+    for (let i = 0; i < 15; i++) {
+      const gIdx = isVertical ? i * 15 + lineIdx : lineIdx * 15 + i;
+      lineTiles[i] = boardGrid[gIdx];
+      lineAnchors[i] = isAnchorSquare[gIdx];
+      linePremiums[i] = premiumGrid[gIdx];
+      lineCrossMasks[i] = crossMask[gIdx];
+      lineCrossScores[i] = crossScoreBase[gIdx];
+      lineHasPerp[i] = hasPerpGrid[gIdx];
+    }
 
-        // Bounding collision checks
-        const preR = isVertical ? startR - 1 : startR;
-        const preC = isVertical ? startC : startC - 1;
-        const postR = isVertical ? endR + 1 : endR;
-        const postC = isVertical ? endC : endC + 1;
+    const recordPlay = (startPos, endPos, rackUsed) => {
+      let word = "";
+      let mainWordScore = 0;
+      let mainWordMult = 1;
+      let crossScoreTotal = 0;
+      let exposes3W = false;
 
-        if (preR >= 0 && preC >= 0 && boardGrid[preR * 15 + preC] !== 0)
-          continue;
-        if (postR < 15 && postC < 15 && boardGrid[postR * 15 + postC] !== 0)
-          continue;
+      for (let p = startPos; p <= endPos; p++) {
+        const charCode = placedLetters[p];
+        word += String.fromCharCode(65 + charCode);
 
-        let isValid = true;
-        let rackTilesUsed = 0;
-        let blanksUsed = 0;
-        let mainWordScore = 0;
-        let mainWordMultiplier = 1;
-        let crossWordsTotalScore = 0;
-        let touchesAnchor = false;
-        let exposes3W = false;
+        const r = isVertical ? p : lineIdx;
+        const c = isVertical ? lineIdx : p;
+        const gIdx = r * 15 + c;
+        const premium = premiumGrid[gIdx];
+        const isExisting = boardGrid[gIdx] !== 0;
+        const isBlank = placedIsBlank[p] === 1;
 
-        for (let k = 0; k < 26; k++) tempCounts[k] = rackCounts[k];
+        if (isExisting) {
+          mainWordScore += scoreTable[charCode];
+        } else {
+          let letterVal = isBlank ? 0 : scoreTable[charCode];
+          if (premium === 1) letterVal *= 2;
+          else if (premium === 2) letterVal *= 3;
+          else if (premium === 3) mainWordMult *= 2;
+          else if (premium === 4) mainWordMult *= 3;
+          mainWordScore += letterVal;
 
-        for (let i = 0; i < wLen; i++) {
-          const r = isVertical ? pos + i : index;
-          const c = isVertical ? index : pos + i;
-          const gridIdx = r * 15 + c;
-          const existingCode = boardGrid[gridIdx];
-          const charCode = w.charCodeAt(i) - 97;
-          const premium = premiumGrid[gridIdx];
+          if (
+            (r > 0 &&
+              premiumGrid[(r - 1) * 15 + c] === 4 &&
+              boardGrid[(r - 1) * 15 + c] === 0) ||
+            (r < 14 &&
+              premiumGrid[(r + 1) * 15 + c] === 4 &&
+              boardGrid[(r + 1) * 15 + c] === 0) ||
+            (c > 0 &&
+              premiumGrid[r * 15 + c - 1] === 4 &&
+              boardGrid[r * 15 + c - 1] === 0) ||
+            (c < 14 &&
+              premiumGrid[r * 15 + c + 1] === 4 &&
+              boardGrid[r * 15 + c + 1] === 0)
+          ) {
+            exposes3W = true;
+          }
 
-          if (existingCode !== 0) {
-            if (existingCode - 1 !== charCode) {
-              isValid = false;
-              break;
-            }
-            mainWordScore += scoreTable[charCode];
-            touchesAnchor = true;
+          if (lineHasPerp[p] === 1) {
+            let pVal = isBlank ? 0 : scoreTable[charCode];
+            if (premium === 1) pVal *= 2;
+            else if (premium === 2) pVal *= 3;
+            let cMult = 1;
+            if (premium === 3) cMult = 2;
+            else if (premium === 4) cMult = 3;
+            crossScoreTotal += (lineCrossScores[p] + pVal) * cMult;
+          }
+        }
+      }
+
+      let totalScore = mainWordScore * mainWordMult + crossScoreTotal;
+      if (rackUsed === 7) totalScore += bingoBonus;
+
+      results.push({
+        word,
+        score: totalScore,
+        row: isVertical ? startPos : lineIdx,
+        col: isVertical ? lineIdx : startPos,
+        dir: isVertical ? "V" : "H",
+        exposes3W,
+      });
+    };
+
+    const gen = (
+      pos,
+      currPos,
+      nodeIdx,
+      direction,
+      minPos,
+      maxPos,
+      tilesUsed,
+    ) => {
+      // 1. Terminal Check
+      if (nodeIdx !== 0) {
+        const entry = gaddag[nodeIdx];
+        const isTerminal = (entry & 0x20) !== 0;
+
+        if (isTerminal && tilesUsed > 0 && maxPos > minPos) {
+          const leftClean = minPos === 0 || lineTiles[minPos - 1] === 0;
+          let rightClean = false;
+          if (direction > 0) {
+            rightClean = currPos >= 15 || lineTiles[currPos] === 0;
           } else {
-            // O(1) Bitmask validation
-            if ((crossMask[gridIdx] & (1 << charCode)) === 0) {
-              isValid = false;
-              break;
-            }
+            rightClean = pos + 1 >= 15 || lineTiles[pos + 1] === 0;
+          }
 
-            if (isAnchorSquare[gridIdx] === 1) touchesAnchor = true;
+          if (leftClean && rightClean) {
+            recordPlay(minPos, maxPos, tilesUsed);
+          }
+        }
+      }
 
-            let charScore = scoreTable[charCode];
-            let isBlankTile = false;
+      // 2. Bounds check for further placements
+      if (direction > 0 && currPos >= 15) return;
 
-            if (tempCounts[charCode] > 0) {
-              tempCounts[charCode]--;
-              rackTilesUsed++;
-            } else if (blanksUsed < wildcards) {
-              blanksUsed++;
-              rackTilesUsed++;
-              charScore = 0;
-              isBlankTile = true;
+      let childPointer = gaddag[nodeIdx] >>> 7;
+      if (childPointer === 0) return;
+
+      while (childPointer !== 0) {
+        const entry = gaddag[childPointer];
+        const letterCode = entry & 0x1f;
+        const hasSibling = (entry & 0x40) !== 0;
+
+        // Reversal Transition '#'
+        if (letterCode === REV_CODE) {
+          if (direction < 0) {
+            gen(pos, pos + 1, childPointer, 1, minPos, maxPos, tilesUsed);
+          }
+        }
+        // Letter Transitions (A-Z)
+        else if (letterCode < 26) {
+          if (currPos >= 0 && currPos < 15) {
+            const existing = lineTiles[currPos];
+
+            if (existing !== 0) {
+              if (existing - 1 === letterCode) {
+                placedLetters[currPos] = letterCode;
+                placedIsBlank[currPos] = 0;
+                const nextMin =
+                  direction < 0 && currPos < minPos ? currPos : minPos;
+                const nextMax =
+                  direction > 0 && currPos > maxPos ? currPos : maxPos;
+                gen(
+                  pos,
+                  currPos + direction,
+                  childPointer,
+                  direction,
+                  nextMin,
+                  nextMax,
+                  tilesUsed,
+                );
+              }
             } else {
-              isValid = false;
-              break;
-            }
+              if ((lineCrossMasks[currPos] & (1 << letterCode)) !== 0) {
+                const nextMin =
+                  direction < 0 && currPos < minPos ? currPos : minPos;
+                const nextMax =
+                  direction > 0 && currPos > maxPos ? currPos : maxPos;
 
-            if (premium === 1) charScore *= 2;
-            else if (premium === 2) charScore *= 3;
-            else if (premium === 3) mainWordMultiplier *= 2;
-            else if (premium === 4) mainWordMultiplier *= 3;
-
-            mainWordScore += charScore;
-
-            if (!exposes3W) {
-              if (
-                r > 0 &&
-                premiumGrid[(r - 1) * 15 + c] === 4 &&
-                boardGrid[(r - 1) * 15 + c] === 0
-              )
-                exposes3W = true;
-              else if (
-                r < 14 &&
-                premiumGrid[(r + 1) * 15 + c] === 4 &&
-                boardGrid[(r + 1) * 15 + c] === 0
-              )
-                exposes3W = true;
-              else if (
-                c > 0 &&
-                premiumGrid[r * 15 + c - 1] === 4 &&
-                boardGrid[r * 15 + c - 1] === 0
-              )
-                exposes3W = true;
-              else if (
-                c < 14 &&
-                premiumGrid[r * 15 + c + 1] === 4 &&
-                boardGrid[r * 15 + c + 1] === 0
-              )
-                exposes3W = true;
-            }
-
-            if (hasPerpGrid[gridIdx] === 1) {
-              let tileVal = isBlankTile ? 0 : scoreTable[charCode];
-              if (premium === 1) tileVal *= 2;
-              else if (premium === 2) tileVal *= 3;
-              let cMult = 1;
-              if (premium === 3) cMult = 2;
-              else if (premium === 4) cMult = 3;
-              crossWordsTotalScore +=
-                (crossScoreBase[gridIdx] + tileVal) * cMult;
+                if (rackCounts[letterCode] > 0) {
+                  rackCounts[letterCode]--;
+                  placedLetters[currPos] = letterCode;
+                  placedIsBlank[currPos] = 0;
+                  gen(
+                    pos,
+                    currPos + direction,
+                    childPointer,
+                    direction,
+                    nextMin,
+                    nextMax,
+                    tilesUsed + 1,
+                  );
+                  rackCounts[letterCode]++;
+                } else if (wildcards > 0) {
+                  wildcards--;
+                  placedLetters[currPos] = letterCode;
+                  placedIsBlank[currPos] = 1;
+                  gen(
+                    pos,
+                    currPos + direction,
+                    childPointer,
+                    direction,
+                    nextMin,
+                    nextMax,
+                    tilesUsed + 1,
+                  );
+                  wildcards++;
+                }
+              }
             }
           }
         }
 
-        if (!isValid || !touchesAnchor || rackTilesUsed === 0) continue;
+        if (!hasSibling) break;
+        childPointer++;
+      }
+    };
 
-        let total = mainWordScore * mainWordMultiplier + crossWordsTotalScore;
-        if (rackTilesUsed === 7) total += bingoBonus;
-
-        results.push({
-          word: w,
-          score: total,
-          row: isVertical ? pos : index,
-          col: isVertical ? index : pos,
-          dir: isVertical ? "V" : "H",
-          exposes3W,
-        });
+    for (let pos = 0; pos < 15; pos++) {
+      if (lineAnchors[pos] === 1) {
+        gen(pos, pos, 0, -1, pos, pos, 0);
       }
     }
   };
 
   for (let i = 0; i < 15; i++) {
-    processVector(false, i);
-    processVector(true, i);
+    searchVector(false, i);
+    searchVector(true, i);
   }
 
-  // 7. Deduplicate & Sort top 150 plays
+  // Deduplicate and retain highest scores
   const uniqueMap = new Map();
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
     const key = `${r.word}-${r.row}-${r.col}-${r.dir}`;
     const existing = uniqueMap.get(key);
-    if (!existing || existing.score < r.score) {
-      uniqueMap.set(key, r);
-    }
+    if (!existing || existing.score < r.score) uniqueMap.set(key, r);
   }
 
   const sorted = Array.from(uniqueMap.values()).sort(
