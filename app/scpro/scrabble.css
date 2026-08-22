@@ -87,7 +87,7 @@
 /* Main App Layout */
 .v3-layout {
   display: grid;
-  grid-template-columns: 1fr 360px;
+  grid-template-columns: 1fr 380px;
   gap: 12px;
 }
 
@@ -197,7 +197,7 @@
   font-size: 9px;
 }
 
-/* Placed & Preview Letter Tile */
+/* Placed & Preview Letter Tile on Board */
 .cell-tile {
   background-color: var(--cell-tile-bg);
   color: var(--w98-text);
@@ -210,6 +210,82 @@
   align-items: center;
   justify-content: center;
   box-shadow: 1px 1px 0 var(--w98-text);
+}
+
+/* --- SCALED UP RACK TRAY & PHYSICAL TILES --- */
+.rack-tray {
+  display: flex;
+  gap: 6px;
+  min-height: 54px;
+  padding: 6px 8px;
+  background-color: #8b5a2b;
+  border: 2px solid;
+  border-color: #5c3a1e #d4a373 #d4a373 #5c3a1e;
+  box-shadow: inset 1px 1px 3px #000000;
+  align-items: center;
+  overflow-x: auto;
+  margin-top: 6px;
+}
+
+.scrabble-tile-rack {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 38px;
+  height: 42px;
+  background-color: var(--cell-tile-bg);
+  border: 1px solid #4a4a4a;
+  border-radius: 2px;
+  box-shadow:
+    2px 2px 0px #000000,
+    inset 1px 1px 0px #ffffff;
+  font-weight: bold;
+  font-size: 20px;
+  color: #000000;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.scrabble-tile-rack .tile-score-sub {
+  position: absolute;
+  bottom: 2px;
+  right: 3px;
+  font-size: 9px;
+  font-weight: normal;
+  line-height: 1;
+  color: #333333 !important;
+}
+
+/* --- SCALED UP RESULT CARD MINI TILES --- */
+.scrabble-tile-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 25px;
+  height: 28px;
+  background-color: var(--cell-tile-bg);
+  border: 1px solid #606060;
+  border-radius: 2px;
+  box-shadow:
+    1px 1px 0px rgba(0, 0, 0, 0.7),
+    inset 1px 1px 0px #ffffff;
+  font-weight: bold;
+  font-size: 14px;
+  color: #000000 !important;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.scrabble-tile-mini .tile-score-sub {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-size: 8px;
+  font-weight: normal;
+  line-height: 1;
+  color: #333333 !important;
 }
 
 /* Sidebar Controls & Inputs */
@@ -257,7 +333,7 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   scrollbar-width: thin;
   scrollbar-color: var(--w98-surface) var(--w98-border-mid);
 }
@@ -295,6 +371,14 @@
 
 .result-card:hover * {
   color: var(--w98-text-light) !important;
+}
+
+.result-card:hover .scrabble-tile-mini {
+  border-color: #ffffff;
+}
+
+.result-card:hover .scrabble-tile-mini * {
+  color: #000000 !important;
 }
 
 .result-card:hover div[style*="color: rgb(0, 128, 0)"],

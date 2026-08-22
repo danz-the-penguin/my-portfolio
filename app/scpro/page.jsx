@@ -426,14 +426,28 @@ const BOARD_PRESETS = {
 };
 
 const BoardCell = React.memo(
-  ({ r, c, tileVal, previewChar, premium, isSelected, typingDir, onClick }) => {
+  ({
+    r,
+    c,
+    tileVal,
+    previewChar,
+    premium,
+    isSelected,
+    isInActiveLine,
+    typingDir,
+    onClick,
+  }) => {
     const cellClass = tileVal ? "" : premium ? `cell-${premium}` : "";
 
     return (
       <div
-        className={`board-cell ${cellClass} ${isSelected ? "selected" : ""}`}
+        className={`board-cell ${cellClass} ${isSelected ? "selected" : ""} ${isInActiveLine && !isSelected ? "in-line-highlight" : ""}`}
         onClick={onClick}
-        style={{ position: "relative" }}
+        style={{
+          position: "relative",
+          backgroundColor:
+            isInActiveLine && !isSelected && !tileVal ? "#e6f0fa" : undefined,
+        }}
       >
         {tileVal ? (
           <div className="cell-tile">{tileVal}</div>
@@ -453,7 +467,7 @@ const BoardCell = React.memo(
           premium || ""
         )}
 
-        {isSelected && !tileVal && (
+        {isSelected && (
           <div
             style={{
               position: "absolute",
@@ -464,6 +478,7 @@ const BoardCell = React.memo(
               fontWeight: "bold",
               lineHeight: 1,
               pointerEvents: "none",
+              textShadow: "1px 1px 0px #ffffff",
             }}
           >
             {typingDir === "H" ? "►" : "▼"}
@@ -483,6 +498,7 @@ const ResultCard = React.memo(
     rowNum,
     inTwl,
     inSowpods,
+    activePreset,
     onHover,
     onLeave,
     onClick,
@@ -500,13 +516,26 @@ const ResultCard = React.memo(
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "4px",
+              gap: "6px",
               flexWrap: "wrap",
+              marginBottom: "4px",
             }}
           >
-            <span style={{ fontWeight: "bold", fontSize: "13px" }}>
-              {play.word.toUpperCase()}
-            </span>
+            {/* Larger Scrabble Mini Tile Display */}
+            <div style={{ display: "flex", gap: "2px" }}>
+              {play.word
+                .toUpperCase()
+                .split("")
+                .map((ch, idx) => (
+                  <div key={idx} className="scrabble-tile-mini">
+                    <span>{ch}</span>
+                    <sub className="tile-score-sub">
+                      {activePreset?.scores?.[ch.toLowerCase()] ?? 0}
+                    </sub>
+                  </div>
+                ))}
+            </div>
+
             {inTwl ? (
               <span
                 className="badge-legal"
@@ -538,7 +567,7 @@ const ResultCard = React.memo(
               </span>
             )}
           </div>
-          <div style={{ fontSize: "11px", opacity: 0.9, marginTop: "2px" }}>
+          <div style={{ fontSize: "11px", opacity: 0.9 }}>
             <strong>{notation}</strong> &bull; Row {rowNum}, Col {colLetter} (
             {play.dir === "H" ? "Across" : "Down"})
           </div>
@@ -675,11 +704,14 @@ export default function ScrabbleSolverV3() {
 
   const [loading, setLoading] = useState(true);
   const [isSolving, setIsSolving] = useState(false);
-  const [rack, setRack] = useState("RROTITE");
+  const [rack, setRack] = useState("REOPMAJ?");
   const [candidatePlays, setCandidatePlays] = useState([]);
   const [hoveredPlay, setHoveredPlay] = useState(null);
   const [isBoardLocked, setIsBoardLocked] = useState(true);
   const [typingDir, setTypingDir] = useState("H");
+
+  // History Stack for Undo
+  const [history, setHistory] = useState([]);
 
   const [board, setBoard] = useState(() =>
     Array(15)
@@ -711,7 +743,7 @@ export default function ScrabbleSolverV3() {
     };
   }, []);
 
-  // Load Lexicons (using concat instead of spread operator to avoid Maximum Call Stack Error)
+  // Load Lexicons safely
   useEffect(() => {
     const rawJson = Object.keys(localDictionary)
       .map((w) => w.trim().toLowerCase())
@@ -775,7 +807,6 @@ export default function ScrabbleSolverV3() {
     loadAll();
   }, []);
 
-  // Auto-switch default active toggles on preset change
   const handlePresetChange = (key) => {
     setActivePresetKey(key);
     const def = BOARD_PRESETS[key]?.defaultLexicon;
@@ -788,7 +819,6 @@ export default function ScrabbleSolverV3() {
     }
   };
 
-  // Dynamically compile active worker wordlist without call stack overflow
   const workerWordList = useMemo(() => {
     let list = [];
     if (useTwl) list = list.concat(twlWords);
@@ -797,7 +827,6 @@ export default function ScrabbleSolverV3() {
     return Array.from(new Set(list));
   }, [useTwl, useSowpods, useJsonDict, twlWords, sowpodsWords, jsonWords]);
 
-  // Dispatch to worker
   useEffect(() => {
     if (!deferredRack.trim() || workerWordList.length === 0) {
       setCandidatePlays([]);
@@ -814,17 +843,46 @@ export default function ScrabbleSolverV3() {
     });
   }, [deferredBoard, deferredRack, workerWordList, activePreset]);
 
-  // Keyboard navigation & tile entry
-  useEffect(() => {
-    if (isBoardLocked) return;
+  // Undo Handler
+  const handleUndo = useCallback(() => {
+    setHistory((prevHistory) => {
+      if (prevHistory.length === 0) return prevHistory;
+      const lastState = prevHistory[prevHistory.length - 1];
+      setBoard(lastState.board);
+      setRack(lastState.rack);
+      setHoveredPlay(null);
+      return prevHistory.slice(0, -1);
+    });
+  }, []);
 
+  // Keyboard navigation & Shortcuts
+  useEffect(() => {
     const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        if (
+          document.activeElement &&
+          document.activeElement.tagName === "INPUT"
+        )
+          return;
+        e.preventDefault();
+        handleUndo();
+        return;
+      }
+
+      if (isBoardLocked) return;
       if (document.activeElement && document.activeElement.tagName === "INPUT")
         return;
       if (!selectedCell) return;
       const [r, c] = selectedCell;
 
+      if (e.key === " ") {
+        e.preventDefault();
+        setTypingDir((d) => (d === "H" ? "V" : "H"));
+        return;
+      }
+
       if (e.key >= "a" && e.key <= "z") {
+        setHistory((prev) => [...prev, { board, rack }]);
         setBoard((prev) => {
           const next = prev.map((row) => [...row]);
           next[r][c] = e.key.toUpperCase();
@@ -838,6 +896,7 @@ export default function ScrabbleSolverV3() {
         }
       } else if (e.key === "Backspace") {
         if (board[r][c]) {
+          setHistory((prev) => [...prev, { board, rack }]);
           setBoard((prev) => {
             const next = prev.map((row) => [...row]);
             next[r][c] = "";
@@ -846,6 +905,7 @@ export default function ScrabbleSolverV3() {
         } else {
           if (typingDir === "H" && c > 0) {
             setSelectedCell([r, c - 1]);
+            setHistory((prev) => [...prev, { board, rack }]);
             setBoard((prev) => {
               const next = prev.map((row) => [...row]);
               next[r][c - 1] = "";
@@ -853,6 +913,7 @@ export default function ScrabbleSolverV3() {
             });
           } else if (typingDir === "V" && r > 0) {
             setSelectedCell([r - 1, c]);
+            setHistory((prev) => [...prev, { board, rack }]);
             setBoard((prev) => {
               const next = prev.map((row) => [...row]);
               next[r - 1][c] = "";
@@ -861,31 +922,37 @@ export default function ScrabbleSolverV3() {
           }
         }
       } else if (e.key === "Delete") {
+        setHistory((prev) => [...prev, { board, rack }]);
         setBoard((prev) => {
           const next = prev.map((row) => [...row]);
           next[r][c] = "";
           return next;
         });
       } else if (e.key === "ArrowRight") {
-        setTypingDir("H");
-        if (c < 14) setSelectedCell([r, c + 1]);
+        e.preventDefault();
+        if (typingDir !== "H") setTypingDir("H");
+        else if (c < 14) setSelectedCell([r, c + 1]);
       } else if (e.key === "ArrowLeft") {
-        setTypingDir("H");
-        if (c > 0) setSelectedCell([r, c - 1]);
+        e.preventDefault();
+        if (typingDir !== "H") setTypingDir("H");
+        else if (c > 0) setSelectedCell([r, c - 1]);
       } else if (e.key === "ArrowDown") {
-        setTypingDir("V");
-        if (r < 14) setSelectedCell([r + 1, c]);
+        e.preventDefault();
+        if (typingDir !== "V") setTypingDir("V");
+        else if (r < 14) setSelectedCell([r + 1, c]);
       } else if (e.key === "ArrowUp") {
-        setTypingDir("V");
-        if (r > 0) setSelectedCell([r - 1, c]);
+        e.preventDefault();
+        if (typingDir !== "V") setTypingDir("V");
+        else if (r > 0) setSelectedCell([r - 1, c]);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedCell, isBoardLocked, typingDir, board]);
+  }, [selectedCell, isBoardLocked, typingDir, board, rack, handleUndo]);
 
   const clearBoard = () => {
+    setHistory((prev) => [...prev, { board, rack }]);
     setBoard(
       Array(15)
         .fill(null)
@@ -908,6 +975,8 @@ export default function ScrabbleSolverV3() {
 
   const applyPlay = useCallback(
     (play) => {
+      setHistory((prev) => [...prev, { board, rack }]);
+
       setBoard((prev) => {
         const next = prev.map((row) => [...row]);
         for (let i = 0; i < play.word.length; i++) {
@@ -946,7 +1015,7 @@ export default function ScrabbleSolverV3() {
 
       setHoveredPlay(null);
     },
-    [board],
+    [board, rack],
   );
 
   const handleCellClick = useCallback(
@@ -996,7 +1065,7 @@ export default function ScrabbleSolverV3() {
           </div>
 
           <div className="win98-content">
-            {/* Top Toolbar Controls & Dictionary Toggles */}
+            {/* Toolbar Controls */}
             <div
               style={{
                 marginBottom: "10px",
@@ -1039,7 +1108,7 @@ export default function ScrabbleSolverV3() {
                   </select>
                 </div>
 
-                {/* Dictionary Toggle Switches / Checkboxes */}
+                {/* Dictionary Checkboxes */}
                 <div
                   className="win98-inset"
                   style={{
@@ -1121,7 +1190,24 @@ export default function ScrabbleSolverV3() {
                     setTypingDir((prev) => (prev === "H" ? "V" : "H"))
                   }
                 >
-                  Typing: {typingDir === "H" ? "Across ➔" : "Down ⬇"}
+                  Typing:{" "}
+                  {typingDir === "H"
+                    ? "Across ➔ (Space to flip)"
+                    : "Down ⬇ (Space to flip)"}
+                </button>
+
+                <button
+                  className="win98-button"
+                  style={{
+                    fontWeight: "bold",
+                    opacity: history.length === 0 ? 0.5 : 1,
+                    cursor: history.length === 0 ? "not-allowed" : "pointer",
+                  }}
+                  onClick={handleUndo}
+                  disabled={history.length === 0}
+                  title="Undo last play or change (Ctrl+Z)"
+                >
+                  ↶ Undo
                 </button>
 
                 <button className="win98-button" onClick={clearBoard}>
@@ -1150,6 +1236,14 @@ export default function ScrabbleSolverV3() {
                             selectedCell &&
                             selectedCell[0] === r &&
                             selectedCell[1] === c;
+
+                          const isInActiveLine =
+                            !isBoardLocked &&
+                            selectedCell &&
+                            (typingDir === "H"
+                              ? selectedCell[0] === r
+                              : selectedCell[1] === c);
+
                           const previewChar = previewMap[`${r},${c}`];
                           const premium = activePreset.premiums[`${r},${c}`];
 
@@ -1162,6 +1256,7 @@ export default function ScrabbleSolverV3() {
                               previewChar={previewChar}
                               premium={premium}
                               isSelected={isSelected}
+                              isInActiveLine={isInActiveLine}
                               typingDir={typingDir}
                               onClick={() => handleCellClick(r, c)}
                             />
@@ -1186,8 +1281,16 @@ export default function ScrabbleSolverV3() {
                   gap: "10px",
                 }}
               >
+                {/* Physical Wooden Rack Tray & Input */}
                 <div className="win98-inset">
-                  <label style={{ fontSize: "11px", fontWeight: "bold" }}>
+                  <label
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: "bold",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
+                  >
                     Your Rack Tiles:
                   </label>
                   <input
@@ -1195,8 +1298,47 @@ export default function ScrabbleSolverV3() {
                     className="win98-input"
                     value={rack}
                     onChange={(e) => setRack(e.target.value.toUpperCase())}
-                    placeholder="E.g. ITTKTJO or ? for blank"
+                    placeholder="E.g. REOPMAJ? or ? for blank"
                   />
+
+                  {/* Tray Display: Blank tiles render empty with no subscript */}
+                  <div className="rack-tray">
+                    {rack.trim().length === 0 ? (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          color: "#d4a373",
+                          fontStyle: "italic",
+                          padding: "4px",
+                        }}
+                      >
+                        Empty rack (Type letters above)...
+                      </span>
+                    ) : (
+                      rack.split("").map((ch, idx) => {
+                        const isBlank = ["?", ".", "0", "*", "_"].includes(ch);
+                        const score = isBlank
+                          ? 0
+                          : (activePreset?.scores?.[ch.toLowerCase()] ?? 0);
+                        return (
+                          <div
+                            key={idx}
+                            className="scrabble-tile-rack"
+                            title={
+                              isBlank
+                                ? "Blank / Wildcard Tile (0 pts)"
+                                : `${ch.toUpperCase()} (${score} pts)`
+                            }
+                          >
+                            <span>{isBlank ? "" : ch.toUpperCase()}</span>
+                            {!isBlank && (
+                              <sub className="tile-score-sub">{score}</sub>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
 
                 <div className="win98-window" style={{ flex: 1, margin: 0 }}>
@@ -1256,6 +1398,7 @@ export default function ScrabbleSolverV3() {
                             rowNum={rowNum}
                             inTwl={inTwl}
                             inSowpods={inSowpods}
+                            activePreset={activePreset}
                             onHover={handleHoverPlay}
                             onLeave={handleLeavePlay}
                             onClick={applyPlay}
