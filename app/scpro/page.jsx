@@ -802,7 +802,7 @@ export default function ScrabbleSolverV3() {
     }
   };
 
-  // Dispatch to GADDAG Binary Worker
+  // Dispatch to Zero-GC GADDAG Worker
   useEffect(() => {
     if (!deferredRack.trim()) {
       setCandidatePlays([]);

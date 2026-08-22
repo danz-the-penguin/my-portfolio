@@ -116,7 +116,7 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* 16x16 Interactive Grid (Headers + 15x15 Board) */
+/* 16x16 Interactive Grid */
 .board-grid {
   display: grid;
   grid-template-columns: 24px repeat(15, minmax(24px, 32px));
@@ -127,7 +127,7 @@
   padding: 2px;
 }
 
-/* Win98 Beveled Coordinate Headers (A-O, 1-15) */
+/* Win98 Coordinate Headers (A-O, 1-15) */
 .board-header {
   display: flex;
   align-items: center;
@@ -197,7 +197,6 @@
   font-size: 9px;
 }
 
-/* Placed & Preview Letter Tile on Board */
 .cell-tile {
   background-color: var(--cell-tile-bg);
   color: var(--w98-text);
@@ -338,7 +337,7 @@
   scrollbar-color: var(--w98-surface) var(--w98-border-mid);
 }
 
-/* Retro Beveled Scrollbar */
+/* Retro Scrollbars */
 ::-webkit-scrollbar {
   width: 16px;
   height: 16px;
@@ -431,7 +430,7 @@
   font-weight: bold;
 }
 
-/* Floating Tooltip Window */
+/* Tooltip Window */
 .win98-tooltip {
   position: fixed;
   width: 280px;

@@ -1,53 +1,76 @@
-/* Windows 98 Classic Theme */
+/* Windows 98 Classic Theme - Scrabble v3 */
+
+:root {
+  /* Win98 Core Palette */
+  --w98-desktop: #008080;
+  --w98-surface: #c0c0c0;
+  --w98-surface-inset: #ffffff;
+  --w98-text: #000000;
+  --w98-text-light: #ffffff;
+  --w98-border-light: #ffffff;
+  --w98-border-mid: #d4d0c8;
+  --w98-border-dark: #808080;
+  --w98-border-darker: #404040;
+  --w98-title-start: #000080;
+  --w98-title-end: #1084d0;
+  --w98-highlight: #000080;
+
+  /* Scrabble Board Colors */
+  --board-bg: #808080;
+  --board-container: #a0a0a0;
+  --cell-normal: #dcdcdc;
+  --cell-tile-bg: #ffebad;
+  --cell-selected: #ffffcc;
+  --cell-selected-border: #ff0000;
+  --cell-2L-bg: #a3c2e0;
+  --cell-2L-text: #1a365d;
+  --cell-3L-bg: #4b6fa6;
+  --cell-3L-text: #ffffff;
+  --cell-2W-bg: #e0a3a3;
+  --cell-2W-text: #742a2a;
+  --cell-3W-bg: #a64b4b;
+  --cell-3W-text: #ffffff;
+}
+
 @font-face {
   font-family: "PixelSans";
   src: local("MS Sans Serif"), local("Tahoma"), local("Arial");
 }
 
-/* Global Body / Background */
-.win98-body {
-  background-color: #008080; /* Classic Win98 Teal Desktop */
-  min-height: 100vh;
-  padding: 20px;
-  font-family: "PixelSans", "MS Sans Serif", Tahoma, sans-serif;
-  color: #000000;
+* {
   box-sizing: border-box;
 }
 
+.win98-body {
+  background-color: var(--w98-desktop);
+  min-height: 100vh;
+  padding: 15px;
+  font-family: "PixelSans", "MS Sans Serif", Tahoma, sans-serif;
+  color: var(--w98-text);
+}
+
 .win98-container {
-  max-width: 850px;
+  max-width: 1280px;
   margin: 0 auto;
 }
 
-/* Retro Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 16px;
-  height: 16px;
-}
-::-webkit-scrollbar-track {
-  background: #e0e0e0;
-  border: 1px solid #808080;
-}
-::-webkit-scrollbar-thumb {
-  background: #c0c0c0;
-  border: 2px solid;
-  border-color: #ffffff #808080 #808080 #ffffff;
-}
-
-/* Classic Windows 98 Window Panel */
 .win98-window {
-  background-color: #c0c0c0;
+  background-color: var(--w98-surface);
   border: 2px solid;
-  border-color: #ffffff #808080 #808080 #ffffff;
-  box-shadow: 1px 1px 0px #000000;
+  border-color: var(--w98-border-light) var(--w98-border-dark)
+    var(--w98-border-dark) var(--w98-border-light);
+  box-shadow: 1px 1px 0px var(--w98-text);
   padding: 3px;
   margin-bottom: 16px;
 }
 
-/* Window Title Bar */
 .win98-titlebar {
-  background: linear-gradient(90deg, #000080, #1084d0);
-  color: #ffffff;
+  background: linear-gradient(
+    90deg,
+    var(--w98-title-start),
+    var(--w98-title-end)
+  );
+  color: var(--w98-text-light);
   padding: 3px 6px;
   font-weight: bold;
   font-size: 13px;
@@ -57,387 +80,374 @@
   user-select: none;
 }
 
-.win98-titlebar-inactive {
-  background: #808080;
-  color: #ffffff;
-}
-
-.win98-titlebar-controls {
-  display: flex;
-  gap: 2px;
-}
-
-.win98-btn-titlebar {
-  width: 16px;
-  height: 14px;
-  background: #c0c0c0;
-  border: 1px solid;
-  border-color: #ffffff #808080 #808080 #ffffff;
-  font-size: 9px;
-  font-weight: bold;
-  line-height: 12px;
-  text-align: center;
-  cursor: pointer;
-  padding: 0;
-  color: #000000;
-}
-
-.win98-btn-titlebar:active {
-  border-color: #808080 #ffffff #ffffff #808080;
-  padding: 1px 0 0 1px;
-}
-
-/* Window Content Body */
 .win98-content {
-  padding: 12px;
+  padding: 10px;
 }
 
-/* Layout Headers */
-.win98-header-layout {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* Main App Layout */
+.v3-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
   gap: 12px;
-  margin-bottom: 10px;
 }
 
-@media (max-width: 600px) {
-  .win98-header-layout {
-    flex-direction: column;
-    align-items: flex-start;
+@media (max-width: 960px) {
+  .v3-layout {
+    grid-template-columns: 1fr;
   }
 }
 
-.win98-app-title {
-  margin: 0;
-  font-size: 16px;
-}
-
-.win98-app-subtitle {
-  margin: 2px 0 0 0;
-  font-size: 11px;
-}
-
-/* Inset/Sunken Box */
 .win98-inset {
-  background-color: #ffffff;
+  background-color: var(--w98-surface-inset);
   border: 2px solid;
-  border-color: #808080 #ffffff #ffffff #808080;
-  box-shadow: inset 1px 1px 0px #000000;
+  border-color: var(--w98-border-dark) var(--w98-border-light)
+    var(--w98-border-light) var(--w98-border-dark);
+  box-shadow: inset 1px 1px 0px var(--w98-text);
   padding: 6px;
 }
 
-/* Rack Container */
-.win98-rack-container {
+/* Interactive Grid Container */
+.board-grid-container {
   display: flex;
-  gap: 4px;
-  align-items: center;
-  min-width: 180px;
-  min-height: 46px;
-  box-sizing: border-box;
+  justify-content: center;
   overflow-x: auto;
+  padding: 8px;
+  background: var(--board-container);
+  -webkit-overflow-scrolling: touch;
 }
 
-.win98-rack-empty {
-  font-size: 11px;
-  color: #666666;
-}
-
-/* Grid Form Fields */
-.win98-field-group {
+/* 16x16 Interactive Grid (Headers + 15x15 Board) */
+.board-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 8px;
-  margin-top: 10px;
+  grid-template-columns: 24px repeat(15, minmax(24px, 32px));
+  grid-template-rows: 24px repeat(15, minmax(24px, 32px));
+  gap: 2px;
+  background-color: var(--board-bg);
+  border: 2px solid var(--w98-border-darker);
+  padding: 2px;
 }
 
-.win98-label {
-  display: block;
-  font-size: 11px;
+/* Win98 Beveled Coordinate Headers (A-O, 1-15) */
+.board-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: bold;
-  margin-bottom: 3px;
+  font-size: 11px;
+  color: var(--w98-text);
+  background-color: var(--w98-surface);
+  border: 1px solid;
+  border-color: var(--w98-border-light) var(--w98-border-dark)
+    var(--w98-border-dark) var(--w98-border-light);
+  user-select: none;
 }
 
+.board-cell {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 10px;
+  cursor: pointer;
+  user-select: none;
+  background-color: var(--cell-normal);
+  border: 1px solid var(--w98-border-light);
+  text-transform: uppercase;
+  position: relative;
+}
+
+.board-cell:hover {
+  outline: 2px solid var(--w98-highlight);
+  z-index: 2;
+}
+
+.board-cell.selected {
+  outline: 2px solid var(--cell-selected-border);
+  z-index: 3;
+  background-color: var(--cell-selected);
+}
+
+/* Premium Board Cells */
+.cell-2L {
+  background-color: var(--cell-2L-bg);
+  color: var(--cell-2L-text);
+  font-size: 9px;
+}
+.cell-3L {
+  background-color: var(--cell-3L-bg);
+  color: var(--cell-3L-text);
+  font-size: 9px;
+}
+.cell-2W {
+  background-color: var(--cell-2W-bg);
+  color: var(--cell-2W-text);
+  font-size: 9px;
+}
+.cell-3W {
+  background-color: var(--cell-3W-bg);
+  color: var(--cell-3W-text);
+  font-size: 9px;
+}
+.cell-CENTER {
+  background-color: var(--cell-2W-bg);
+  color: var(--cell-2W-text);
+  font-size: 9px;
+}
+
+/* Placed & Preview Letter Tile on Board */
+.cell-tile {
+  background-color: var(--cell-tile-bg);
+  color: var(--w98-text);
+  border: 1px solid var(--w98-border-dark);
+  font-size: 13px;
+  font-weight: bold;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 1px 1px 0 var(--w98-text);
+}
+
+/* --- SCALED UP RACK TRAY & PHYSICAL TILES --- */
+.rack-tray {
+  display: flex;
+  gap: 6px;
+  min-height: 54px;
+  padding: 6px 8px;
+  background-color: #8b5a2b;
+  border: 2px solid;
+  border-color: #5c3a1e #d4a373 #d4a373 #5c3a1e;
+  box-shadow: inset 1px 1px 3px #000000;
+  align-items: center;
+  overflow-x: auto;
+  margin-top: 6px;
+}
+
+.scrabble-tile-rack {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 38px;
+  height: 42px;
+  background-color: var(--cell-tile-bg);
+  border: 1px solid #4a4a4a;
+  border-radius: 2px;
+  box-shadow:
+    2px 2px 0px #000000,
+    inset 1px 1px 0px #ffffff;
+  font-weight: bold;
+  font-size: 20px;
+  color: #000000;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.scrabble-tile-rack .tile-score-sub {
+  position: absolute;
+  bottom: 2px;
+  right: 3px;
+  font-size: 9px;
+  font-weight: normal;
+  line-height: 1;
+  color: #333333 !important;
+}
+
+/* --- SCALED UP RESULT CARD MINI TILES --- */
+.scrabble-tile-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 25px;
+  height: 28px;
+  background-color: var(--cell-tile-bg);
+  border: 1px solid #606060;
+  border-radius: 2px;
+  box-shadow:
+    1px 1px 0px rgba(0, 0, 0, 0.7),
+    inset 1px 1px 0px #ffffff;
+  font-weight: bold;
+  font-size: 14px;
+  color: #000000 !important;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.scrabble-tile-mini .tile-score-sub {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-size: 8px;
+  font-weight: normal;
+  line-height: 1;
+  color: #333333 !important;
+}
+
+/* Sidebar Controls & Inputs */
 .win98-input {
   width: 100%;
   padding: 4px;
-  font-size: 12px;
+  font-size: 13px;
   font-family: monospace;
-  background-color: #ffffff;
+  background-color: var(--w98-surface-inset);
   border: 2px solid;
-  border-color: #808080 #ffffff #ffffff #808080;
-  box-shadow: inset 1px 1px 0px #000000;
-  box-sizing: border-box;
+  border-color: var(--w98-border-dark) var(--w98-border-light)
+    var(--w98-border-light) var(--w98-border-dark);
+  box-shadow: inset 1px 1px 0px var(--w98-text);
   text-transform: uppercase;
   outline: none;
 }
 
 .win98-input:focus {
-  outline: 1px dotted #000000;
-  outline-offset: -3px;
+  background-color: #f0f8ff;
 }
 
-.win98-input-lowercase {
-  text-transform: none;
-}
-
-/* Toolbar & Sorting Control Row */
-.win98-toolbar {
-  margin-top: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.win98-toolbar-group {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-/* Scrabble Tile Win98 Style */
-.win98-tile {
-  display: inline-flex;
-  position: relative;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 34px;
-  background-color: #ffebad;
+.win98-button {
+  background-color: var(--w98-surface);
   border: 2px solid;
-  border-color: #ffffff #808080 #808080 #ffffff;
-  box-shadow: 1px 1px 0px #000000;
+  border-color: var(--w98-border-light) var(--w98-border-dark)
+    var(--w98-border-dark) var(--w98-border-light);
+  box-shadow: 1px 1px 0px var(--w98-text);
+  padding: 4px 10px;
+  font-size: 11px;
   font-weight: bold;
-  font-size: 16px;
-  color: #000000;
+  cursor: pointer;
+  color: var(--w98-text);
   user-select: none;
-  flex-shrink: 0;
 }
 
-.win98-tile-score {
-  position: absolute;
-  bottom: 1px;
-  right: 2px;
-  font-size: 8px;
-  line-height: 1;
-  font-weight: bold;
-  color: #555555;
+.win98-button:active {
+  border-color: var(--w98-border-dark) var(--w98-border-light)
+    var(--w98-border-light) var(--w98-border-dark);
+  padding: 5px 9px 3px 11px;
+  box-shadow: none;
 }
 
-/* Results Stack & Rows */
-.win98-results-stack {
+.results-list {
+  max-height: 480px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.win98-message-box {
-  text-align: center;
-  font-size: 12px;
-}
-
-.win98-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-  border-bottom: 1px solid #d4d0c8;
-  cursor: pointer;
-  user-select: none;
-  gap: 8px;
-}
-
-.win98-row:last-child {
-  border-bottom: none;
-}
-
-.win98-row:hover {
-  background-color: #000080;
-  color: #ffffff;
-}
-
-.win98-row-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  overflow-x: auto;
-}
-
-.win98-row-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.win98-row-meta {
-  font-size: 10px;
-  color: #555555;
-  margin-right: 4px;
-}
-
-.win98-row:hover .win98-row-meta {
-  color: #d0d0d0;
-}
-
-.win98-row:hover .win98-inspect-link {
-  color: #ffffff;
-}
-
-.win98-score-box {
-  width: 40px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.win98-score-num {
-  font-family: monospace;
-  font-weight: bold;
-  font-size: 14px;
-  color: inherit;
-}
-
-.win98-score-num.top-score {
-  color: #008000;
-}
-
-.win98-row:hover .win98-score-num.top-score {
-  color: #55ff55;
-}
-
-.win98-score-pts {
-  font-size: 9px;
-  display: block;
-}
-
-.win98-tile-group {
-  display: flex;
   gap: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--w98-surface) var(--w98-border-mid);
 }
 
-.win98-inspect-link {
-  font-size: 11px;
-  color: #000000;
-  text-decoration: underline;
+/* Retro Beveled Scrollbar */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+::-webkit-scrollbar-track {
+  background: var(--w98-border-mid);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--w98-surface);
+  border: 2px solid;
+  border-color: var(--w98-border-light) var(--w98-border-dark)
+    var(--w98-border-dark) var(--w98-border-light);
+  box-shadow: 1px 1px 0px var(--w98-text);
 }
 
-.win98-badge-bingo {
-  background-color: #800080;
+.result-card {
+  padding: 6px;
+  border-bottom: 1px solid var(--w98-border-mid);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.05s ease;
+}
+
+.result-card:hover {
+  background-color: var(--w98-highlight);
+  color: var(--w98-text-light);
+}
+
+.result-card:hover * {
+  color: var(--w98-text-light) !important;
+}
+
+.result-card:hover .scrabble-tile-mini {
+  border-color: #ffffff;
+}
+
+.result-card:hover .scrabble-tile-mini * {
+  color: #000000 !important;
+}
+
+.result-card:hover div[style*="color: rgb(0, 128, 0)"],
+.result-card:hover div[style*="color: #008000"] {
+  color: #55ff55 !important;
+}
+
+/* Badges */
+.badge-risk-high {
+  background: var(--cell-3W-bg);
+  color: var(--w98-text-light);
+  font-size: 9px;
+  padding: 2px 4px;
+  font-weight: bold;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.badge-risk-safe {
+  background: #2e8b57;
+  color: var(--w98-text-light);
+  font-size: 9px;
+  padding: 2px 4px;
+  font-weight: bold;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.badge-legal {
+  background-color: #2e7d32;
   color: #ffffff;
   font-size: 9px;
   padding: 2px 4px;
   font-weight: bold;
 }
 
-/* Retro Buttons */
-.win98-button {
-  background-color: #c0c0c0;
-  border: 2px solid;
-  border-color: #ffffff #808080 #808080 #ffffff;
-  box-shadow: 1px 1px 0px #000000;
-  padding: 4px 12px;
-  font-size: 11px;
-  font-weight: bold;
-  cursor: pointer;
-  color: #000000;
-  user-select: none;
-}
-
-.win98-button:focus-visible {
-  outline: 1px dotted #000000;
-  outline-offset: -4px;
-}
-
-.win98-button:active,
-.win98-button.active {
-  background-color: #e0e0e0;
-  border-color: #808080 #ffffff #ffffff #808080;
-  box-shadow: inset 1px 1px 0px #000000;
-  padding: 5px 11px 3px 13px;
-}
-
-/* Status Bar */
-.win98-statusbar {
-  display: flex;
-  gap: 4px;
-  margin-top: 10px;
-  font-size: 11px;
-}
-
-.win98-statusbar-field {
-  background-color: #c0c0c0;
-  border: 1px solid;
-  border-color: #808080 #ffffff #ffffff #808080;
-  padding: 2px 6px;
-  flex: 1;
-}
-
-/* Modal Window */
-.win98-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-.win98-modal-dialog {
-  width: 380px;
-  max-width: 90vw;
-}
-
-.win98-modal-body {
-  min-height: 120px;
-  padding: 10px;
-}
-
-.win98-modal-footer {
-  margin-top: 10px;
-  text-align: right;
-}
-
-.win98-def-container {
-  font-size: 11px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.win98-def-phonetic {
-  font-family: monospace;
-  color: #000080;
-}
-
-.win98-def-list {
-  margin: 2px 0 0 0;
-  padding-left: 16px;
-}
-
-/* Blank Tile Visual Indicator */
-.win98-tile-blank {
-  background-color: #fffde6;
-  border-style: dashed;
-}
-
-.win98-tile-blank .win98-tile-score {
-  color: #a0a0a0;
-}
-
-/* Row Hover contrast overrides */
-.win98-row:hover .win98-score-pts,
-.win98-row:hover .win98-score-num {
+.badge-illegal {
+  background-color: #c62828;
   color: #ffffff;
+  font-size: 9px;
+  padding: 2px 4px;
+  font-weight: bold;
 }
 
-.win98-button.active {
-  background-color: #d4d0c8;
-  border-style: inset;
+.badge-dict-only {
+  background-color: #d97706;
+  color: #ffffff;
+  font-size: 9px;
+  padding: 2px 4px;
+  font-weight: bold;
+}
+
+/* Floating Tooltip Window */
+.win98-tooltip {
+  position: fixed;
+  width: 280px;
+  max-width: 90vw;
+  z-index: 99999;
+  pointer-events: none;
+  box-shadow: 2px 2px 0px var(--w98-text);
+  margin-bottom: 0;
+}
+
+.win98-tooltip-content {
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  max-height: 150px;
+  overflow-y: auto;
+  white-space: normal;
+  word-break: break-word;
 }

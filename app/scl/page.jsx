@@ -1,576 +1,1382 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useDeferredValue } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useDeferredValue,
+  useCallback,
+} from "react";
 import "./scrabble.css";
+import localDictionary from "./dictionary_compact.json";
+import RefereeChecker from "./RefereeChecker";
 
-const SCORES = {
-  a: 1, b: 3, c: 3, d: 2, e: 1, f: 4, g: 2, h: 4, i: 1, j: 8, k: 5, l: 1,
-  m: 3, n: 1, o: 1, p: 3, q: 10, r: 1, s: 1, t: 1, u: 1, v: 4, w: 4, x: 8,
-  y: 4, z: 10
+const COLUMNS = [
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "H",
+  "I",
+  "J",
+  "K",
+  "L",
+  "M",
+  "N",
+  "O",
+];
+
+const BOARD_PRESETS = {
+  plato_literati: {
+    name: "Plato Wordplay / Literati (15x15)",
+    defaultLexicon: "twl",
+    bingoBonus: 35,
+    scores: {
+      a: 1,
+      b: 2,
+      c: 2,
+      d: 2,
+      e: 1,
+      f: 3,
+      g: 2,
+      h: 3,
+      i: 1,
+      j: 5,
+      k: 3,
+      l: 2,
+      m: 2,
+      n: 1,
+      o: 1,
+      p: 2,
+      q: 5,
+      r: 1,
+      s: 1,
+      t: 1,
+      u: 1,
+      v: 3,
+      w: 3,
+      x: 5,
+      y: 3,
+      z: 5,
+    },
+    premiums: {
+      "0,0": "3W",
+      "0,4": "2L",
+      "0,7": "3L",
+      "0,10": "2L",
+      "0,14": "3W",
+      "1,3": "2W",
+      "1,6": "3L",
+      "1,8": "3L",
+      "1,11": "2W",
+      "2,2": "3W",
+      "2,5": "2L",
+      "2,9": "2L",
+      "2,12": "3W",
+      "3,1": "2W",
+      "3,4": "2L",
+      "3,7": "2W",
+      "3,10": "2L",
+      "3,13": "2W",
+      "4,0": "2L",
+      "4,3": "2L",
+      "4,6": "2L",
+      "4,8": "2L",
+      "4,11": "2L",
+      "4,14": "2L",
+      "5,2": "2L",
+      "5,5": "3L",
+      "5,9": "3L",
+      "5,12": "2L",
+      "6,1": "3L",
+      "6,4": "2L",
+      "6,10": "2L",
+      "6,13": "3L",
+      "7,0": "3L",
+      "7,3": "2W",
+      "7,7": "CENTER",
+      "7,11": "2W",
+      "7,14": "3L",
+      "8,1": "3L",
+      "8,4": "2L",
+      "8,10": "2L",
+      "8,13": "3L",
+      "9,2": "2L",
+      "9,5": "3L",
+      "9,9": "3L",
+      "9,12": "2L",
+      "10,0": "2L",
+      "10,3": "2L",
+      "10,6": "2L",
+      "10,8": "2L",
+      "10,11": "2L",
+      "10,14": "2L",
+      "11,1": "2W",
+      "11,4": "2L",
+      "11,7": "2W",
+      "11,10": "2L",
+      "11,13": "2W",
+      "12,2": "3W",
+      "12,5": "2L",
+      "12,9": "2L",
+      "12,12": "3W",
+      "13,3": "2W",
+      "13,6": "3L",
+      "13,8": "3L",
+      "13,11": "2W",
+      "14,0": "3W",
+      "14,4": "2L",
+      "14,7": "3L",
+      "14,10": "2L",
+      "14,14": "3W",
+    },
+  },
+  scrabble: {
+    name: "Scrabble (Standard 15x15)",
+    defaultLexicon: "sowpods",
+    bingoBonus: 50,
+    scores: {
+      a: 1,
+      b: 3,
+      c: 3,
+      d: 2,
+      e: 1,
+      f: 4,
+      g: 2,
+      h: 4,
+      i: 1,
+      j: 8,
+      k: 5,
+      l: 1,
+      m: 3,
+      n: 1,
+      o: 1,
+      p: 3,
+      q: 10,
+      r: 1,
+      s: 1,
+      t: 1,
+      u: 1,
+      v: 4,
+      w: 4,
+      x: 8,
+      y: 4,
+      z: 10,
+    },
+    premiums: {
+      "0,0": "3W",
+      "0,3": "2L",
+      "0,7": "3W",
+      "0,11": "2L",
+      "0,14": "3W",
+      "1,1": "2W",
+      "1,5": "3L",
+      "1,9": "3L",
+      "1,13": "2W",
+      "2,2": "2W",
+      "2,6": "2L",
+      "2,8": "2L",
+      "2,12": "2W",
+      "3,0": "2L",
+      "3,3": "2W",
+      "3,7": "2L",
+      "3,11": "2W",
+      "3,14": "2L",
+      "4,4": "2W",
+      "4,10": "2W",
+      "5,1": "3L",
+      "5,5": "3L",
+      "5,9": "3L",
+      "5,13": "3L",
+      "6,2": "2L",
+      "6,6": "2L",
+      "6,8": "2L",
+      "6,12": "2L",
+      "7,0": "3W",
+      "7,3": "2L",
+      "7,7": "CENTER",
+      "7,11": "2L",
+      "7,14": "3W",
+      "8,2": "2L",
+      "8,6": "2L",
+      "8,8": "2L",
+      "8,12": "2L",
+      "9,1": "3L",
+      "9,5": "3L",
+      "9,9": "3L",
+      "9,13": "3L",
+      "10,4": "2W",
+      "10,10": "2W",
+      "11,0": "2L",
+      "11,3": "2W",
+      "11,7": "2L",
+      "11,11": "2W",
+      "11,14": "2L",
+      "12,2": "2W",
+      "12,6": "2L",
+      "12,8": "2L",
+      "12,12": "2W",
+      "13,1": "2W",
+      "13,5": "3L",
+      "13,9": "3L",
+      "13,13": "2W",
+      "14,0": "3W",
+      "14,3": "2L",
+      "14,7": "3W",
+      "14,11": "2L",
+      "14,14": "3W",
+    },
+  },
+  literati: {
+    name: "Literati (Yahoo Classic)",
+    defaultLexicon: "twl",
+    bingoBonus: 35,
+    scores: {
+      a: 1,
+      b: 2,
+      c: 2,
+      d: 2,
+      e: 1,
+      f: 3,
+      g: 2,
+      h: 3,
+      i: 1,
+      j: 5,
+      k: 3,
+      l: 2,
+      m: 2,
+      n: 1,
+      o: 1,
+      p: 2,
+      q: 5,
+      r: 1,
+      s: 1,
+      t: 1,
+      u: 1,
+      v: 3,
+      w: 3,
+      x: 5,
+      y: 3,
+      z: 5,
+    },
+    premiums: {
+      "0,0": "2W",
+      "0,4": "3L",
+      "0,10": "3L",
+      "0,14": "2W",
+      "1,1": "2L",
+      "1,5": "2W",
+      "1,9": "2W",
+      "1,13": "2L",
+      "2,2": "2W",
+      "2,6": "3L",
+      "2,8": "3L",
+      "2,12": "2W",
+      "3,3": "3L",
+      "3,7": "2W",
+      "3,11": "3L",
+      "4,0": "3L",
+      "4,4": "2L",
+      "4,10": "2L",
+      "4,14": "3L",
+      "5,1": "2W",
+      "5,5": "3L",
+      "5,9": "3L",
+      "5,13": "2W",
+      "6,2": "3L",
+      "6,6": "2L",
+      "6,8": "2L",
+      "6,12": "3L",
+      "7,3": "2W",
+      "7,7": "CENTER",
+      "7,11": "2W",
+      "8,2": "3L",
+      "8,6": "2L",
+      "8,8": "2L",
+      "8,12": "3L",
+      "9,1": "2W",
+      "9,5": "3L",
+      "9,9": "3L",
+      "9,13": "2W",
+      "10,0": "3L",
+      "10,4": "2L",
+      "10,10": "2L",
+      "10,14": "3L",
+      "11,3": "3L",
+      "11,7": "2W",
+      "11,11": "3L",
+      "12,2": "2W",
+      "12,6": "3L",
+      "12,8": "3L",
+      "12,12": "2W",
+      "13,1": "2L",
+      "13,5": "2W",
+      "13,9": "2W",
+      "13,13": "2L",
+      "14,0": "2W",
+      "14,4": "3L",
+      "14,10": "3L",
+      "14,14": "2W",
+    },
+  },
+  literaki: {
+    name: "Literaki / Kurnik",
+    defaultLexicon: "sowpods",
+    bingoBonus: 50,
+    scores: {
+      a: 1,
+      b: 3,
+      c: 2,
+      d: 2,
+      e: 1,
+      f: 5,
+      g: 3,
+      h: 3,
+      i: 1,
+      j: 3,
+      k: 3,
+      l: 2,
+      m: 2,
+      n: 1,
+      o: 1,
+      p: 2,
+      q: 5,
+      r: 1,
+      s: 1,
+      t: 2,
+      u: 3,
+      v: 4,
+      w: 1,
+      x: 8,
+      y: 2,
+      z: 1,
+    },
+    premiums: {
+      "0,0": "3W",
+      "0,2": "3L",
+      "0,4": "2L",
+      "0,10": "2L",
+      "0,12": "3L",
+      "0,14": "3W",
+      "1,1": "2W",
+      "1,5": "2L",
+      "1,9": "2L",
+      "1,13": "2W",
+      "2,0": "3L",
+      "2,2": "2W",
+      "2,6": "3L",
+      "2,8": "3L",
+      "2,12": "2W",
+      "2,14": "3L",
+      "3,3": "2W",
+      "3,7": "3L",
+      "3,11": "2W",
+      "4,0": "2L",
+      "4,4": "2W",
+      "4,10": "2W",
+      "4,14": "2L",
+      "5,1": "2L",
+      "5,5": "3L",
+      "5,9": "3L",
+      "5,13": "2L",
+      "6,2": "3L",
+      "6,6": "2L",
+      "6,8": "2L",
+      "6,12": "3L",
+      "7,3": "3L",
+      "7,7": "CENTER",
+      "7,11": "3L",
+      "8,2": "3L",
+      "8,6": "2L",
+      "8,8": "2L",
+      "8,12": "3L",
+      "9,1": "2L",
+      "9,5": "3L",
+      "9,9": "3L",
+      "9,13": "2L",
+      "10,0": "2L",
+      "10,4": "2W",
+      "10,10": "2W",
+      "10,14": "2L",
+      "11,3": "2W",
+      "11,7": "3L",
+      "11,11": "2W",
+      "12,0": "3L",
+      "12,2": "2W",
+      "12,6": "3L",
+      "12,8": "3L",
+      "12,12": "2W",
+      "12,14": "3L",
+      "13,1": "2W",
+      "13,5": "2L",
+      "13,9": "2L",
+      "13,13": "2W",
+      "14,0": "3W",
+      "14,2": "3L",
+      "14,4": "2L",
+      "14,10": "2L",
+      "14,12": "3L",
+      "14,14": "3W",
+    },
+  },
 };
 
-function getCharCounts(str) {
-  const counts = {};
-  for (const char of str.toLowerCase()) {
-    counts[char] = (counts[char] || 0) + 1;
-  }
-  return counts;
-}
+const BoardCell = React.memo(
+  ({
+    r,
+    c,
+    tileVal,
+    previewChar,
+    premium,
+    isSelected,
+    isInActiveLine,
+    typingDir,
+    onClick,
+  }) => {
+    const cellClass = tileVal ? "" : premium ? `cell-${premium}` : "";
 
-function Tile({ char, isBlank = false }) {
-  const isBlankChar = isBlank || char === "?" || char === ".";
-  const displayChar = isBlankChar && (char === "?" || char === ".") ? "" : char.toUpperCase();
-  const score = isBlankChar ? 0 : (SCORES[char.toLowerCase()] ?? 0);
+    return (
+      <div
+        className={`board-cell ${cellClass} ${isSelected ? "selected" : ""} ${isInActiveLine && !isSelected ? "in-line-highlight" : ""}`}
+        onClick={onClick}
+        style={{
+          position: "relative",
+          backgroundColor:
+            isInActiveLine && !isSelected && !tileVal ? "#e6f0fa" : undefined,
+        }}
+      >
+        {tileVal ? (
+          <div className="cell-tile">{tileVal}</div>
+        ) : previewChar ? (
+          <div
+            className="cell-tile"
+            style={{
+              backgroundColor: "#2e7d32",
+              color: "#ffffff",
+              opacity: 0.85,
+              border: "1px dashed #ffffff",
+            }}
+          >
+            {previewChar}
+          </div>
+        ) : (
+          premium || ""
+        )}
+
+        {isSelected && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: "1px",
+              right: "2px",
+              fontSize: "8px",
+              color: "#ff0000",
+              fontWeight: "bold",
+              lineHeight: 1,
+              pointerEvents: "none",
+              textShadow: "1px 1px 0px #ffffff",
+            }}
+          >
+            {typingDir === "H" ? "►" : "▼"}
+          </div>
+        )}
+      </div>
+    );
+  },
+);
+BoardCell.displayName = "BoardCell";
+
+const ResultCard = React.memo(
+  ({
+    play,
+    notation,
+    colLetter,
+    rowNum,
+    inTwl,
+    inSowpods,
+    activePreset,
+    onHover,
+    onLeave,
+    onClick,
+  }) => {
+    return (
+      <div
+        className="result-card"
+        style={{ cursor: "pointer" }}
+        onMouseEnter={() => onHover(play)}
+        onMouseLeave={onLeave}
+        onClick={() => onClick(play)}
+      >
+        <div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              flexWrap: "wrap",
+              marginBottom: "4px",
+            }}
+          >
+            <div style={{ display: "flex", gap: "2px" }}>
+              {play.word
+                .toUpperCase()
+                .split("")
+                .map((ch, idx) => (
+                  <div key={idx} className="scrabble-tile-mini">
+                    <span>{ch}</span>
+                    <sub className="tile-score-sub">
+                      {activePreset?.scores?.[ch.toLowerCase()] ?? 0}
+                    </sub>
+                  </div>
+                ))}
+            </div>
+
+            {inTwl ? (
+              <span
+                className="badge-legal"
+                style={{ fontSize: "8px", padding: "1px 3px" }}
+              >
+                TWL
+              </span>
+            ) : (
+              <span
+                className="badge-illegal"
+                style={{ fontSize: "8px", padding: "1px 3px" }}
+              >
+                NO-TWL
+              </span>
+            )}
+            {inSowpods ? (
+              <span
+                className="badge-legal"
+                style={{ fontSize: "8px", padding: "1px 3px" }}
+              >
+                CSW
+              </span>
+            ) : (
+              <span
+                className="badge-illegal"
+                style={{ fontSize: "8px", padding: "1px 3px" }}
+              >
+                NO-CSW
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: "11px", opacity: 0.9 }}>
+            <strong>{notation}</strong> &bull; Row {rowNum}, Col {colLetter} (
+            {play.dir === "H" ? "Across" : "Down"})
+          </div>
+        </div>
+
+        <div style={{ textAlign: "right" }}>
+          <div
+            style={{
+              fontSize: "14px",
+              fontWeight: "bold",
+              color: "#008000",
+            }}
+          >
+            {play.score} PTS
+          </div>
+          {play.exposes3W ? (
+            <span className="badge-risk-high">EXPOSES 3W</span>
+          ) : (
+            <span className="badge-risk-safe">SAFE LEAVE</span>
+          )}
+        </div>
+      </div>
+    );
+  },
+);
+ResultCard.displayName = "ResultCard";
+
+function FloatingDefinitionTooltip({ hoveredPlay, twlSet, sowpodsSet }) {
+  const tooltipRef = useRef(null);
+
+  useEffect(() => {
+    if (!hoveredPlay) return;
+
+    const handleMouseMove = (e) => {
+      if (!tooltipRef.current) return;
+      const x = Math.max(10, Math.min(e.clientX + 14, window.innerWidth - 300));
+      const y = Math.max(
+        10,
+        Math.min(e.clientY + 14, window.innerHeight - 180),
+      );
+      tooltipRef.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    };
+
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [hoveredPlay]);
+
+  if (!hoveredPlay) return null;
+
+  const w = hoveredPlay.word.toLowerCase();
+  const inTwl = twlSet ? twlSet.has(w) : false;
+  const inSowpods = sowpodsSet ? sowpodsSet.has(w) : false;
 
   return (
-    <div className={`win98-tile ${isBlankChar ? "win98-tile-blank" : ""}`}>
-      <span>{displayChar}</span>
-      <span className="win98-tile-score">{score}</span>
+    <div
+      ref={tooltipRef}
+      className="win98-window win98-tooltip"
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "280px",
+        zIndex: 99999,
+        pointerEvents: "none",
+        boxShadow: "2px 2px 0px #000000",
+        willChange: "transform",
+        margin: 0,
+      }}
+    >
+      <div
+        className="win98-titlebar"
+        style={{ padding: "2px 4px", fontSize: "11px" }}
+      >
+        <span>{hoveredPlay.word.toUpperCase()}</span>
+        <span>{hoveredPlay.score} PTS</span>
+      </div>
+      <div
+        className="win98-inset"
+        style={{
+          padding: "6px 8px",
+          fontSize: "11px",
+          lineHeight: "1.4",
+          maxHeight: "150px",
+          overflowY: "auto",
+          whiteSpace: "normal",
+          wordBreak: "break-word",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: "4px",
+            marginBottom: "5px",
+            flexWrap: "wrap",
+          }}
+        >
+          {inTwl ? (
+            <span className="badge-legal">✔ TWL (PLATO)</span>
+          ) : (
+            <span className="badge-illegal">✖ NOT TWL</span>
+          )}
+
+          {inSowpods ? (
+            <span className="badge-legal">✔ SOWPODS (INTL)</span>
+          ) : (
+            <span className="badge-illegal">✖ NOT SOWPODS</span>
+          )}
+        </div>
+        {localDictionary[w] || (
+          <span style={{ color: "#777", fontStyle: "italic" }}>
+            Valid tournament play (inflected form or no extended definition
+            entry).
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
-export default function ScrabbleSolver() {
-  const [wordList, setWordList] = useState([]);
+export default function ScrabbleSolverV3() {
+  const [activePresetKey, setActivePresetKey] = useState("plato_literati");
+
+  // Dictionary Toggles
+  const [useTwl, setUseTwl] = useState(true);
+  const [useSowpods, setUseSowpods] = useState(false);
+
+  const [twlSet, setTwlSet] = useState(null);
+  const [sowpodsSet, setSowpodsSet] = useState(null);
+
   const [loading, setLoading] = useState(true);
+  const [isSolving, setIsSolving] = useState(false);
+  const [rack, setRack] = useState("REOPMAJ?");
+  const [candidatePlays, setCandidatePlays] = useState([]);
+  const [hoveredPlay, setHoveredPlay] = useState(null);
+  const [isBoardLocked, setIsBoardLocked] = useState(true);
+  const [typingDir, setTypingDir] = useState("H");
 
-  // Raw Form Inputs
-  const [rack, setRack] = useState("");
-  const [starts, setStarts] = useState("");
-  const [ends, setEnds] = useState("");
-  const [middle, setMiddle] = useState("");
-  const [anchor, setAnchor] = useState("");
-  const [lengthFilter, setLengthFilter] = useState("");
-  const [sortBy, setSortBy] = useState("score");
+  // History Stack for Undo
+  const [history, setHistory] = useState([]);
 
-  // Deferred inputs for smooth typing
+  const [board, setBoard] = useState(() =>
+    Array(15)
+      .fill(null)
+      .map(() => Array(15).fill("")),
+  );
+  const [selectedCell, setSelectedCell] = useState([7, 7]);
+
+  const activePreset =
+    BOARD_PRESETS[activePresetKey] || BOARD_PRESETS.plato_literati;
+  const deferredBoard = useDeferredValue(board);
   const deferredRack = useDeferredValue(rack);
-  const deferredStarts = useDeferredValue(starts);
-  const deferredEnds = useDeferredValue(ends);
-  const deferredMiddle = useDeferredValue(middle);
-  const deferredAnchor = useDeferredValue(anchor);
-  const deferredLengthFilter = useDeferredValue(lengthFilter);
 
-  // Modal State
-  const [activeWord, setActiveWord] = useState(null);
-  const [definition, setDefinition] = useState(null);
-  const [loadingDef, setLoadingDef] = useState(false);
+  const workerRef = useRef(null);
 
   useEffect(() => {
-    fetch("https://raw.githubusercontent.com/raun/Scrabble/master/words.txt")
-      .then((res) => res.text())
-      .then((text) => {
-        const words = text
-          .split("\n")
-          .map((w) => w.trim().toLowerCase())
-          .filter((w) => w.length >= 2 && /^[a-z]+$/.test(w));
-        setWordList(words);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    if (typeof window !== "undefined") {
+      workerRef.current = new Worker(
+        new URL("./solverWorker.js", import.meta.url),
+      );
+
+      workerRef.current.onmessage = (e) => {
+        setCandidatePlays(e.data);
+        setIsSolving(false);
+      };
+    }
+    return () => {
+      workerRef.current?.terminate();
+    };
   }, []);
 
-  const handleInspectWord = async (word) => {
-    setActiveWord(word);
-    setLoadingDef(true);
-    setDefinition(null);
+  // Preload text wordlists for Referee and definition checking
+  useEffect(() => {
+    const fetchList = async (paths, fallbackUrl) => {
+      for (const p of paths) {
+        try {
+          const res = await fetch(p);
+          if (res.ok) {
+            const text = await res.text();
+            const words = text
+              .split("\n")
+              .map((w) => w.trim().toLowerCase())
+              .filter((w) => w.length >= 2 && /^[a-z]+$/.test(w));
+            if (words.length > 0) return words;
+          }
+        } catch {}
+      }
+      if (fallbackUrl) {
+        try {
+          const res = await fetch(fallbackUrl);
+          if (res.ok) {
+            const text = await res.text();
+            return text
+              .split("\n")
+              .map((w) => w.trim().toLowerCase())
+              .filter((w) => w.length >= 2 && /^[a-z]+$/.test(w));
+          }
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
 
-    try {
-      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-      if (!res.ok) throw new Error("Definition not found");
-      const data = await res.json();
-      setDefinition(data[0]);
-    } catch {
-      setDefinition({ error: "No definition available for this word." });
-    } finally {
-      setLoadingDef(false);
+    const loadAll = async () => {
+      const [sow, twl] = await Promise.all([
+        fetchList(
+          ["/sowpods.txt", "/scrabble_words.txt"],
+          "https://raw.githubusercontent.com/raun/Scrabble/master/words.txt",
+        ),
+        fetchList(
+          ["/twl06.txt", "/naspa2023.txt"],
+          "https://raw.githubusercontent.com/jesstess/Scrabble/master/scrabble/twl06.txt",
+        ),
+      ]);
+
+      setSowpodsSet(new Set(sow));
+      setTwlSet(new Set(twl));
+      setLoading(false);
+    };
+
+    loadAll();
+  }, []);
+
+  const handlePresetChange = (key) => {
+    setActivePresetKey(key);
+    const def = BOARD_PRESETS[key]?.defaultLexicon;
+    if (def === "twl") {
+      setUseTwl(true);
+      setUseSowpods(false);
+    } else if (def === "sowpods") {
+      setUseTwl(false);
+      setUseSowpods(true);
     }
   };
 
-  const results = useMemo(() => {
-    if (!deferredRack.trim() || wordList.length === 0) return [];
-
-    const rawRack = deferredRack.toLowerCase();
-    const blanksCount = (rawRack.match(/[\?\.]/g) || []).length;
-    const cleanRack = rawRack.replace(/[\?\.]/g, "");
-    const rackCounts = getCharCounts(cleanRack);
-
-    const s = deferredStarts.toLowerCase().trim();
-    const e = deferredEnds.toLowerCase().trim();
-    const m = deferredMiddle.toLowerCase().trim();
-    const a = deferredAnchor.toLowerCase().trim();
-
-    const boardAllowance = getCharCounts(s + e + m + a);
-
-    let targetMin = null;
-    let targetMax = null;
-    if (deferredLengthFilter.trim()) {
-      const lStr = deferredLengthFilter.trim();
-      if (lStr.includes("-")) {
-        const [p1, p2] = lStr.split("-").map(Number);
-        targetMin = Math.min(p1, p2);
-        targetMax = Math.max(p1, p2);
-      } else if (lStr.endsWith("+")) {
-        targetMin = parseInt(lStr.slice(0, -1), 10);
-      } else if (!isNaN(Number(lStr))) {
-        targetMin = targetMax = parseInt(lStr, 10);
-      }
+  // Dispatch to Zero-GC GADDAG Worker
+  useEffect(() => {
+    if (!deferredRack.trim()) {
+      setCandidatePlays([]);
+      setIsSolving(false);
+      return;
     }
 
-    const matches = [];
+    setIsSolving(true);
+    workerRef.current?.postMessage({
+      rack: deferredRack,
+      board: deferredBoard,
+      activePreset,
+      useTwl,
+      useSowpods,
+    });
+  }, [deferredBoard, deferredRack, activePreset, useTwl, useSowpods]);
 
-    for (const w of wordList) {
-      if (w.length < 2) continue;
-      if (targetMin !== null && w.length < targetMin) continue;
-      if (targetMax !== null && w.length > targetMax) continue;
+  // Undo Handler
+  const handleUndo = useCallback(() => {
+    setHistory((prevHistory) => {
+      if (prevHistory.length === 0) return prevHistory;
+      const lastState = prevHistory[prevHistory.length - 1];
+      setBoard(lastState.board);
+      setRack(lastState.rack);
+      setHoveredPlay(null);
+      return prevHistory.slice(0, -1);
+    });
+  }, []);
 
-      if (s && !w.startsWith(s)) continue;
-      if (e && !w.endsWith(e)) continue;
-      if (a && !w.includes(a)) continue;
-
-      if (m) {
-        const inner = w.slice(1, -1);
-        let innerMatched = true;
-        for (const char of m) {
-          if (!inner.includes(char)) {
-            innerMatched = false;
-            break;
-          }
-        }
-        if (!innerMatched) continue;
+  // Direct Arrow Movement & Dedicated Direction Toggling (Spacebar/Button Only)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        if (
+          document.activeElement &&
+          document.activeElement.tagName === "INPUT"
+        )
+          return;
+        e.preventDefault();
+        handleUndo();
+        return;
       }
 
-      const wordCounts = getCharCounts(w);
-      let neededBlanks = 0;
-      const blankAssignedChars = {};
-      const takenFromBoard = {};
+      if (isBoardLocked) return;
+      if (document.activeElement && document.activeElement.tagName === "INPUT")
+        return;
+      if (!selectedCell) return;
+      const [r, c] = selectedCell;
 
-      for (const [char, count] of Object.entries(wordCounts)) {
-        const availableInRack = rackCounts[char] || 0;
-        if (count > availableInRack) {
-          const missing = count - availableInRack;
-          const allowedBoard = boardAllowance[char] || 0;
-          const fromBoard = Math.min(missing, allowedBoard);
-          takenFromBoard[char] = fromBoard;
-
-          const stillMissing = missing - fromBoard;
-          if (stillMissing > 0) {
-            neededBlanks += stillMissing;
-            blankAssignedChars[char] = stillMissing;
-          }
-        }
+      if (e.key === " ") {
+        e.preventDefault();
+        setTypingDir((d) => (d === "H" ? "V" : "H"));
+        return;
       }
 
-      if (neededBlanks <= blanksCount) {
-        // Construct detailed tile representation & score
-        let score = 0;
-        let rackTilesUsed = 0;
-        const blankTracker = { ...blankAssignedChars };
-        const tilesDetail = [];
-
-        for (const char of w) {
-          let isBlankTile = false;
-          if (blankTracker[char] && blankTracker[char] > 0) {
-            isBlankTile = true;
-            blankTracker[char] -= 1;
-          } else {
-            score += SCORES[char] || 0;
-          }
-          tilesDetail.push({ char, isBlank: isBlankTile });
-        }
-
-        for (const [char, count] of Object.entries(wordCounts)) {
-          const boardUsed = takenFromBoard[char] || 0;
-          rackTilesUsed += Math.max(0, count - boardUsed);
-        }
-
-        const isBingo = rackTilesUsed === 7;
-        if (isBingo) score += 50;
-
-        matches.push({
-          word: w,
-          score,
-          length: w.length,
-          bingo: isBingo,
-          tilesDetail
+      if (e.key >= "a" && e.key <= "z") {
+        setHistory((prev) => [...prev, { board, rack }]);
+        setBoard((prev) => {
+          const next = prev.map((row) => [...row]);
+          next[r][c] = e.key.toUpperCase();
+          return next;
         });
+
+        if (typingDir === "H") {
+          if (c < 14) setSelectedCell([r, c + 1]);
+        } else {
+          if (r < 14) setSelectedCell([r + 1, c]);
+        }
+      } else if (e.key === "Backspace") {
+        if (board[r][c]) {
+          setHistory((prev) => [...prev, { board, rack }]);
+          setBoard((prev) => {
+            const next = prev.map((row) => [...row]);
+            next[r][c] = "";
+            return next;
+          });
+        } else {
+          if (typingDir === "H" && c > 0) {
+            setSelectedCell([r, c - 1]);
+            setHistory((prev) => [...prev, { board, rack }]);
+            setBoard((prev) => {
+              const next = prev.map((row) => [...row]);
+              next[r][c - 1] = "";
+              return next;
+            });
+          } else if (typingDir === "V" && r > 0) {
+            setSelectedCell([r - 1, c]);
+            setHistory((prev) => [...prev, { board, rack }]);
+            setBoard((prev) => {
+              const next = prev.map((row) => [...row]);
+              next[r - 1][c] = "";
+              return next;
+            });
+          }
+        }
+      } else if (e.key === "Delete") {
+        setHistory((prev) => [...prev, { board, rack }]);
+        setBoard((prev) => {
+          const next = prev.map((row) => [...row]);
+          next[r][c] = "";
+          return next;
+        });
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        if (c < 14) setSelectedCell([r, c + 1]);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (c > 0) setSelectedCell([r, c - 1]);
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (r < 14) setSelectedCell([r + 1, c]);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (r > 0) setSelectedCell([r - 1, c]);
       }
-    }
+    };
 
-    if (sortBy === "score") {
-      return matches.sort((x, y) => y.score - x.score || y.length - x.length);
-    } else {
-      return matches.sort((x, y) => y.length - x.length || y.score - x.score);
-    }
-  }, [
-    deferredRack,
-    deferredStarts,
-    deferredEnds,
-    deferredMiddle,
-    deferredAnchor,
-    deferredLengthFilter,
-    sortBy,
-    wordList
-  ]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedCell, isBoardLocked, typingDir, board, rack, handleUndo]);
 
-  const groupedResults = useMemo(() => {
-    if (sortBy !== "length") return {};
-    const groups = {};
-    for (const item of results) {
-      if (!groups[item.length]) groups[item.length] = [];
-      groups[item.length].push(item);
-    }
-    return groups;
-  }, [results, sortBy]);
+  const clearBoard = () => {
+    setHistory((prev) => [...prev, { board, rack }]);
+    setBoard(
+      Array(15)
+        .fill(null)
+        .map(() => Array(15).fill("")),
+    );
+    setHoveredPlay(null);
+  };
 
-  const topScore = useMemo(() => {
-    return results.length > 0 ? Math.max(...results.map((r) => r.score)) : 0;
-  }, [results]);
+  const previewMap = useMemo(() => {
+    if (!hoveredPlay) return {};
+    const map = {};
+    const { word, row, col, dir } = hoveredPlay;
+    for (let i = 0; i < word.length; i++) {
+      const r = dir === "V" ? row + i : row;
+      const c = dir === "H" ? col + i : col;
+      map[`${r},${c}`] = word[i].toUpperCase();
+    }
+    return map;
+  }, [hoveredPlay]);
+
+  const applyPlay = useCallback(
+    (play) => {
+      setHistory((prev) => [...prev, { board, rack }]);
+
+      setBoard((prev) => {
+        const next = prev.map((row) => [...row]);
+        for (let i = 0; i < play.word.length; i++) {
+          const r = play.dir === "V" ? play.row + i : play.row;
+          const c = play.dir === "H" ? play.col + i : play.col;
+          next[r][c] = play.word[i].toUpperCase();
+        }
+        return next;
+      });
+
+      setRack((prevRack) => {
+        let currentRack = prevRack.toUpperCase().split("");
+        for (let i = 0; i < play.word.length; i++) {
+          const r = play.dir === "V" ? play.row + i : play.row;
+          const c = play.dir === "H" ? play.col + i : play.col;
+          if (!board[r][c]) {
+            const char = play.word[i].toUpperCase();
+            const idx = currentRack.indexOf(char);
+            if (idx !== -1) {
+              currentRack.splice(idx, 1);
+            } else {
+              const wildcardIdx = currentRack.findIndex(
+                (ch) =>
+                  ch === "?" ||
+                  ch === "." ||
+                  ch === "0" ||
+                  ch === "*" ||
+                  ch === "_",
+              );
+              if (wildcardIdx !== -1) currentRack.splice(wildcardIdx, 1);
+            }
+          }
+        }
+        return currentRack.join("");
+      });
+
+      setHoveredPlay(null);
+    },
+    [board, rack],
+  );
+
+  const handleCellClick = useCallback(
+    (r, c) => {
+      if (isBoardLocked) setIsBoardLocked(false);
+
+      setSelectedCell((prev) => {
+        if (!prev) return [r, c];
+        const [prevR, prevC] = prev;
+
+        if (prevR === r && prevC === c) {
+          setTypingDir((d) => (d === "H" ? "V" : "H"));
+          return [r, c];
+        }
+
+        return [r, c];
+      });
+    },
+    [isBoardLocked],
+  );
+
+  const handleHoverPlay = useCallback((play) => {
+    setHoveredPlay(play);
+  }, []);
+
+  const handleLeavePlay = useCallback(() => {
+    setHoveredPlay(null);
+  }, []);
 
   return (
     <div className="win98-body">
       <div className="win98-container">
-        {/* Main Application Window */}
         <div className="win98-window">
           <div className="win98-titlebar">
-            <span>Scrabble_Solver_v3.0.exe</span>
-            <div className="win98-titlebar-controls">
-              <button className="win98-btn-titlebar">_</button>
-              <button className="win98-btn-titlebar">&#9633;</button>
-              <button className="win98-btn-titlebar">X</button>
+            <span>
+              Scrabble_Bot_Solver_v3.exe - [Multi-Lexicon Control Panel]
+            </span>
+            <div>
+              <button className="win98-button">X</button>
             </div>
           </div>
 
           <div className="win98-content">
-            <div className="win98-header-layout">
-              <div>
-                <h1 className="win98-app-title">Scrabble Word Finder V3</h1>
-                <p className="win98-app-subtitle">
-                  Enter rack tiles below to find high scoring words.
-                </p>
-              </div>
-
-              {/* Rack Display Area */}
-              <div className="win98-inset win98-rack-container">
-                {rack ? (
-                  rack.split("").map((c, i) => <Tile key={i} char={c} />)
-                ) : (
-                  <span className="win98-rack-empty">[ Empty Rack ]</span>
-                )}
-              </div>
-            </div>
-
-            {/* Inputs Form */}
-            <div className="win98-field-group">
-              <div>
-                <label className="win98-label">Rack (?/.)</label>
-                <input
-                  type="text"
-                  value={rack}
-                  onChange={(e) => setRack(e.target.value)}
-                  placeholder="HOSPITAL"
-                  className="win98-input"
-                />
-              </div>
-
-              <div>
-                <label className="win98-label">Starts With</label>
-                <input
-                  type="text"
-                  value={starts}
-                  onChange={(e) => setStarts(e.target.value)}
-                  placeholder="HO"
-                  className="win98-input"
-                />
-              </div>
-
-              <div>
-                <label className="win98-label">Ends With</label>
-                <input
-                  type="text"
-                  value={ends}
-                  onChange={(e) => setEnds(e.target.value)}
-                  placeholder="AL"
-                  className="win98-input"
-                />
-              </div>
-
-              <div>
-                <label className="win98-label">Contains Inner</label>
-                <input
-                  type="text"
-                  value={middle}
-                  onChange={(e) => setMiddle(e.target.value)}
-                  placeholder="PIT"
-                  className="win98-input"
-                />
-              </div>
-
-              <div>
-                <label className="win98-label">Anchor Letter</label>
-                <input
-                  type="text"
-                  value={anchor}
-                  onChange={(e) => setAnchor(e.target.value)}
-                  placeholder="S"
-                  className="win98-input"
-                />
-              </div>
-
-              <div>
-                <label className="win98-label">Length Range</label>
-                <input
-                  type="text"
-                  value={lengthFilter}
-                  onChange={(e) => setLengthFilter(e.target.value)}
-                  placeholder="8, 3-5, 4+"
-                  className="win98-input win98-input-lowercase"
-                />
-              </div>
-            </div>
-
-            {/* Sorting Toggle Bar */}
+            {/* Toolbar Controls */}
             <div
               style={{
-                marginTop: "12px",
+                marginBottom: "10px",
                 display: "flex",
-                alignItems: "center",
                 justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "10px",
               }}
             >
-              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                <span className="win98-label" style={{ margin: 0 }}>
-                  Sort Results By:
-                </span>
-                <button
-                  className={`win98-button ${sortBy === "score" ? "active" : ""}`}
-                  onClick={() => setSortBy("score")}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
                 >
-                  Highest Score Overall
+                  <label style={{ fontSize: "11px", fontWeight: "bold" }}>
+                    Preset:
+                  </label>
+                  <select
+                    className="win98-input"
+                    style={{
+                      width: "auto",
+                      cursor: "pointer",
+                      padding: "2px 6px",
+                    }}
+                    value={activePresetKey}
+                    onChange={(e) => handlePresetChange(e.target.value)}
+                  >
+                    {Object.entries(BOARD_PRESETS).map(([key, cfg]) => (
+                      <option key={key} value={key}>
+                        {cfg.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Dictionary Checkboxes */}
+                <div
+                  className="win98-inset"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "4px 8px",
+                    fontSize: "11px",
+                    backgroundColor: "#e0e0e0",
+                  }}
+                >
+                  <span style={{ fontWeight: "bold" }}>Solver Dicts:</span>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={useTwl}
+                      onChange={(e) => {
+                        setUseTwl(e.target.checked);
+                        if (!e.target.checked && !useSowpods)
+                          setUseSowpods(true);
+                      }}
+                    />
+                    TWL
+                  </label>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={useSowpods}
+                      onChange={(e) => {
+                        setUseSowpods(e.target.checked);
+                        if (!e.target.checked && !useTwl) setUseTwl(true);
+                      }}
+                    />
+                    SOWPODS
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  className="win98-button"
+                  style={{
+                    fontWeight: "bold",
+                    backgroundColor: isBoardLocked ? "#c0c0c0" : "#ffcccc",
+                  }}
+                  onClick={() => setIsBoardLocked((prev) => !prev)}
+                >
+                  {isBoardLocked
+                    ? "🔒 Locked (Search)"
+                    : "🔓 Unlocked (Opponent)"}
                 </button>
+
                 <button
-                  className={`win98-button ${sortBy === "length" ? "active" : ""}`}
-                  onClick={() => setSortBy("length")}
+                  className="win98-button"
+                  style={{ fontWeight: "bold" }}
+                  onClick={() =>
+                    setTypingDir((prev) => (prev === "H" ? "V" : "H"))
+                  }
                 >
-                  By Word Length
+                  Typing:{" "}
+                  {typingDir === "H"
+                    ? "Across ➔ (Space to flip)"
+                    : "Down ⬇ (Space to flip)"}
+                </button>
+
+                <button
+                  className="win98-button"
+                  style={{
+                    fontWeight: "bold",
+                    opacity: history.length === 0 ? 0.5 : 1,
+                    cursor: history.length === 0 ? "not-allowed" : "pointer",
+                  }}
+                  onClick={handleUndo}
+                  disabled={history.length === 0}
+                  title="Undo last play or change (Ctrl+Z)"
+                >
+                  ↶ Undo
+                </button>
+
+                <button className="win98-button" onClick={clearBoard}>
+                  Clear Board
                 </button>
               </div>
             </div>
 
-            {/* Classic Status Bar */}
-            <div className="win98-statusbar">
-              <div className="win98-statusbar-field">
-                {loading
-                  ? "Loading dictionary..."
-                  : `Dictionary: ${wordList.length.toLocaleString()} words loaded.`}
+            <div className="v3-layout">
+              <div>
+                <div className="board-grid-container win98-inset">
+                  <div className="board-grid">
+                    <div className="board-header"></div>
+                    {COLUMNS.map((col) => (
+                      <div key={col} className="board-header">
+                        {col}
+                      </div>
+                    ))}
+
+                    {board.map((row, r) => (
+                      <React.Fragment key={`row-${r}`}>
+                        <div className="board-header">{r + 1}</div>
+                        {row.map((tileVal, c) => {
+                          const isSelected =
+                            !isBoardLocked &&
+                            selectedCell &&
+                            selectedCell[0] === r &&
+                            selectedCell[1] === c;
+
+                          const isInActiveLine =
+                            !isBoardLocked &&
+                            selectedCell &&
+                            (typingDir === "H"
+                              ? selectedCell[0] === r
+                              : selectedCell[1] === c);
+
+                          const previewChar = previewMap[`${r},${c}`];
+                          const premium = activePreset.premiums[`${r},${c}`];
+
+                          return (
+                            <BoardCell
+                              key={`${r}-${c}`}
+                              r={r}
+                              c={c}
+                              tileVal={tileVal}
+                              previewChar={previewChar}
+                              premium={premium}
+                              isSelected={isSelected}
+                              isInActiveLine={isInActiveLine}
+                              typingDir={typingDir}
+                              onClick={() => handleCellClick(r, c)}
+                            />
+                          );
+                        })}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+
+                <RefereeChecker
+                  twlSet={twlSet}
+                  sowpodsSet={sowpodsSet}
+                  activePreset={activePreset}
+                />
               </div>
-              <div className="win98-statusbar-field">Matches: {results.length}</div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
+              >
+                {/* Physical Wooden Rack Tray & Input */}
+                <div className="win98-inset">
+                  <label
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: "bold",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Your Rack Tiles:
+                  </label>
+                  <input
+                    type="text"
+                    className="win98-input"
+                    value={rack}
+                    onChange={(e) => setRack(e.target.value.toUpperCase())}
+                    placeholder="E.g. REOPMAJ? or ? for blank"
+                  />
+
+                  {/* Tray Display: Blank tiles render empty with no subscript */}
+                  <div className="rack-tray">
+                    {rack.trim().length === 0 ? (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          color: "#d4a373",
+                          fontStyle: "italic",
+                          padding: "4px",
+                        }}
+                      >
+                        Empty rack (Type letters above)...
+                      </span>
+                    ) : (
+                      rack.split("").map((ch, idx) => {
+                        const isBlank = ["?", ".", "0", "*", "_"].includes(ch);
+                        const score = isBlank
+                          ? 0
+                          : (activePreset?.scores?.[ch.toLowerCase()] ?? 0);
+                        return (
+                          <div
+                            key={idx}
+                            className="scrabble-tile-rack"
+                            title={
+                              isBlank
+                                ? "Blank / Wildcard Tile (0 pts)"
+                                : `${ch.toUpperCase()} (${score} pts)`
+                            }
+                          >
+                            <span>{isBlank ? "" : ch.toUpperCase()}</span>
+                            {!isBlank && (
+                              <sub className="tile-score-sub">{score}</sub>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <div className="win98-window" style={{ flex: 1, margin: 0 }}>
+                  <div className="win98-titlebar">
+                    <span>Ranked Strategic Plays</span>
+                    <span>
+                      {isSolving
+                        ? "Calculating..."
+                        : `${candidatePlays.length} Found`}
+                    </span>
+                  </div>
+
+                  <div className="win98-inset results-list">
+                    {loading || isSolving ? (
+                      <div
+                        style={{
+                          padding: "10px",
+                          textAlign: "center",
+                          fontSize: "11px",
+                        }}
+                      >
+                        {loading
+                          ? "Loading Lexicons..."
+                          : "Calculating Best Plays..."}
+                      </div>
+                    ) : candidatePlays.length === 0 ? (
+                      <div
+                        style={{
+                          padding: "10px",
+                          textAlign: "center",
+                          fontSize: "11px",
+                        }}
+                      >
+                        No legal moves found for this board state.
+                      </div>
+                    ) : (
+                      candidatePlays.slice(0, 50).map((play, idx) => {
+                        const colLetter = COLUMNS[play.col];
+                        const rowNum = play.row + 1;
+                        const notation =
+                          play.dir === "H"
+                            ? `${rowNum}${colLetter}`
+                            : `${colLetter}${rowNum}`;
+
+                        const w = play.word.toLowerCase();
+                        const inTwl = twlSet ? twlSet.has(w) : false;
+                        const inSowpods = sowpodsSet
+                          ? sowpodsSet.has(w)
+                          : false;
+
+                        return (
+                          <ResultCard
+                            key={`${play.word}-${play.row}-${play.col}-${play.dir}-${idx}`}
+                            play={play}
+                            notation={notation}
+                            colLetter={colLetter}
+                            rowNum={rowNum}
+                            inTwl={inTwl}
+                            inSowpods={inSowpods}
+                            activePreset={activePreset}
+                            onHover={handleHoverPlay}
+                            onLeave={handleLeavePlay}
+                            onClick={applyPlay}
+                          />
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Results Container */}
-        <main>
-          {loading ? (
-            <div className="win98-window">
-              <div className="win98-content win98-message-box">
-                Loading dictionary into memory...
-              </div>
-            </div>
-          ) : (
-            <div className="win98-results-stack">
-              {results.length === 0 && rack.trim() && (
-                <div className="win98-window">
-                  <div className="win98-content win98-message-box">
-                    0 legal words matched your criteria.
-                  </div>
-                </div>
-              )}
-
-              {/* View Mode 1: Highest Score Regardless of Length */}
-              {sortBy === "score" && results.length > 0 && (
-                <div className="win98-window">
-                  <div className="win98-titlebar win98-titlebar-inactive">
-                    <span>Ranked by Highest Score</span>
-                    <span>{results.length} Total Matches</span>
-                  </div>
-
-                  <div className="win98-inset" style={{ padding: 0 }}>
-                    {results.map((item, idx) => {
-                      const isTop = item.score === topScore;
-                      return (
-                        <div
-                          key={`${item.word}-${idx}`}
-                          onClick={() => handleInspectWord(item.word)}
-                          className="win98-row"
-                        >
-                          <div className="win98-row-left">
-                            <div className="win98-score-box">
-                              <span
-                                className={`win98-score-num ${
-                                  isTop ? "top-score" : ""
-                                }`}
-                              >
-                                {item.score}
-                              </span>
-                              <span className="win98-score-pts">PTS</span>
-                            </div>
-
-                            <div className="win98-tile-group">
-                              {item.tilesDetail.map((t, cIdx) => (
-                                <Tile key={cIdx} char={t.char} isBlank={t.isBlank} />
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="win98-row-right">
-                            <span className="win98-row-meta">
-                              ({item.length} letters)
-                            </span>
-                            {item.bingo && (
-                              <span className="win98-badge-bingo">BINGO +50</span>
-                            )}
-                            <span className="win98-inspect-link">
-                              Inspect &rarr;
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* View Mode 2: Grouped by Word Length */}
-              {sortBy === "length" &&
-                Object.keys(groupedResults)
-                  .map(Number)
-                  .sort((a, b) => b - a)
-                  .map((len) => {
-                    const group = groupedResults[len];
-                    const groupMaxScore = Math.max(...group.map((i) => i.score));
-
-                    return (
-                      <div key={len} className="win98-window">
-                        <div className="win98-titlebar win98-titlebar-inactive">
-                          <span>{len}-Letter Matches</span>
-                          <span>{group.length} Words Found</span>
-                        </div>
-
-                        <div className="win98-inset" style={{ padding: 0 }}>
-                          {group.map((item, idx) => {
-                            const isTop = item.score === groupMaxScore;
-                            return (
-                              <div
-                                key={`${item.word}-${idx}`}
-                                onClick={() => handleInspectWord(item.word)}
-                                className="win98-row"
-                              >
-                                <div className="win98-row-left">
-                                  <div className="win98-score-box">
-                                    <span
-                                      className={`win98-score-num ${
-                                        isTop ? "top-score" : ""
-                                      }`}
-                                    >
-                                      {item.score}
-                                    </span>
-                                    <span className="win98-score-pts">PTS</span>
-                                  </div>
-
-                                  <div className="win98-tile-group">
-                                    {item.tilesDetail.map((t, cIdx) => (
-                                      <Tile key={cIdx} char={t.char} isBlank={t.isBlank} />
-                                    ))}
-                                  </div>
-                                </div>
-
-                                <div className="win98-row-right">
-                                  {item.bingo && (
-                                    <span className="win98-badge-bingo">
-                                      BINGO +50
-                                    </span>
-                                  )}
-                                  <span className="win98-inspect-link">
-                                    Inspect &rarr;
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-            </div>
-          )}
-        </main>
-
-        {/* Modal Dialog Window */}
-        {activeWord && (
-          <div
-            className="win98-modal-overlay"
-            onClick={() => setActiveWord(null)}
-          >
-            <div
-              className="win98-window win98-modal-dialog"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="win98-titlebar">
-                <span>Dictionary.exe - {activeWord.toUpperCase()}</span>
-                <button
-                  className="win98-btn-titlebar"
-                  onClick={() => setActiveWord(null)}
-                >
-                  X
-                </button>
-              </div>
-
-              <div className="win98-content">
-                <div className="win98-inset win98-modal-body">
-                  {loadingDef ? (
-                    <p style={{ margin: 0, fontSize: "11px" }}>
-                      Searching database...
-                    </p>
-                  ) : definition?.error ? (
-                    <p style={{ margin: 0, fontSize: "11px" }}>
-                      {definition.error}
-                    </p>
-                  ) : (
-                    <div className="win98-def-container">
-                      {definition?.phonetic && (
-                        <span className="win98-def-phonetic">
-                          [{definition.phonetic}]
-                        </span>
-                      )}
-                      {definition?.meanings?.map((m, idx) => (
-                        <div key={idx}>
-                          <strong>
-                            <i>{m.partOfSpeech}</i>
-                          </strong>
-                          <ul className="win98-def-list">
-                            {m.definitions.slice(0, 2).map((d, dIdx) => (
-                              <li key={dIdx}>{d.definition}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="win98-modal-footer">
-                  <button
-                    className="win98-button"
-                    onClick={() => setActiveWord(null)}
-                  >
-                    OK
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <FloatingDefinitionTooltip
+          hoveredPlay={hoveredPlay}
+          twlSet={twlSet}
+          sowpodsSet={sowpodsSet}
+        />
       </div>
     </div>
   );
