@@ -9,7 +9,6 @@ import React, {
   useCallback,
 } from "react";
 import "./scrabble.css";
-import localDictionary from "./dictionary_compact.json";
 import RefereeChecker from "./RefereeChecker";
 
 const COLUMNS = [
@@ -30,11 +29,42 @@ const COLUMNS = [
   "O",
 ];
 
+const STANDARD_DIST = {
+  A: 9,
+  B: 2,
+  C: 2,
+  D: 4,
+  E: 12,
+  F: 2,
+  G: 3,
+  H: 2,
+  I: 9,
+  J: 1,
+  K: 1,
+  L: 4,
+  M: 2,
+  N: 6,
+  O: 8,
+  P: 2,
+  Q: 1,
+  R: 6,
+  S: 4,
+  T: 6,
+  U: 4,
+  V: 2,
+  W: 2,
+  X: 1,
+  Y: 2,
+  Z: 1,
+  "?": 2,
+};
+
 const BOARD_PRESETS = {
   plato_literati: {
     name: "Plato Wordplay / Literati (15x15)",
     defaultLexicon: "twl",
     bingoBonus: 35,
+    distribution: STANDARD_DIST,
     scores: {
       a: 1,
       b: 2,
@@ -139,6 +169,7 @@ const BOARD_PRESETS = {
     name: "Scrabble (Standard 15x15)",
     defaultLexicon: "sowpods",
     bingoBonus: 50,
+    distribution: STANDARD_DIST,
     scores: {
       a: 1,
       b: 3,
@@ -231,199 +262,86 @@ const BOARD_PRESETS = {
       "14,14": "3W",
     },
   },
-  literati: {
-    name: "Literati (Yahoo Classic)",
-    defaultLexicon: "twl",
-    bingoBonus: 35,
-    scores: {
-      a: 1,
-      b: 2,
-      c: 2,
-      d: 2,
-      e: 1,
-      f: 3,
-      g: 2,
-      h: 3,
-      i: 1,
-      j: 5,
-      k: 3,
-      l: 2,
-      m: 2,
-      n: 1,
-      o: 1,
-      p: 2,
-      q: 5,
-      r: 1,
-      s: 1,
-      t: 1,
-      u: 1,
-      v: 3,
-      w: 3,
-      x: 5,
-      y: 3,
-      z: 5,
-    },
-    premiums: {
-      "0,0": "2W",
-      "0,4": "3L",
-      "0,10": "3L",
-      "0,14": "2W",
-      "1,1": "2L",
-      "1,5": "2W",
-      "1,9": "2W",
-      "1,13": "2L",
-      "2,2": "2W",
-      "2,6": "3L",
-      "2,8": "3L",
-      "2,12": "2W",
-      "3,3": "3L",
-      "3,7": "2W",
-      "3,11": "3L",
-      "4,0": "3L",
-      "4,4": "2L",
-      "4,10": "2L",
-      "4,14": "3L",
-      "5,1": "2W",
-      "5,5": "3L",
-      "5,9": "3L",
-      "5,13": "2W",
-      "6,2": "3L",
-      "6,6": "2L",
-      "6,8": "2L",
-      "6,12": "3L",
-      "7,3": "2W",
-      "7,7": "CENTER",
-      "7,11": "2W",
-      "8,2": "3L",
-      "8,6": "2L",
-      "8,8": "2L",
-      "8,12": "3L",
-      "9,1": "2W",
-      "9,5": "3L",
-      "9,9": "3L",
-      "9,13": "2W",
-      "10,0": "3L",
-      "10,4": "2L",
-      "10,10": "2L",
-      "10,14": "3L",
-      "11,3": "3L",
-      "11,7": "2W",
-      "11,11": "3L",
-      "12,2": "2W",
-      "12,6": "3L",
-      "12,8": "3L",
-      "12,12": "2W",
-      "13,1": "2L",
-      "13,5": "2W",
-      "13,9": "2W",
-      "13,13": "2L",
-      "14,0": "2W",
-      "14,4": "3L",
-      "14,10": "3L",
-      "14,14": "2W",
-    },
-  },
-  literaki: {
-    name: "Literaki / Kurnik",
-    defaultLexicon: "sowpods",
-    bingoBonus: 50,
-    scores: {
-      a: 1,
-      b: 3,
-      c: 2,
-      d: 2,
-      e: 1,
-      f: 5,
-      g: 3,
-      h: 3,
-      i: 1,
-      j: 3,
-      k: 3,
-      l: 2,
-      m: 2,
-      n: 1,
-      o: 1,
-      p: 2,
-      q: 5,
-      r: 1,
-      s: 1,
-      t: 2,
-      u: 3,
-      v: 4,
-      w: 1,
-      x: 8,
-      y: 2,
-      z: 1,
-    },
-    premiums: {
-      "0,0": "3W",
-      "0,2": "3L",
-      "0,4": "2L",
-      "0,10": "2L",
-      "0,12": "3L",
-      "0,14": "3W",
-      "1,1": "2W",
-      "1,5": "2L",
-      "1,9": "2L",
-      "1,13": "2W",
-      "2,0": "3L",
-      "2,2": "2W",
-      "2,6": "3L",
-      "2,8": "3L",
-      "2,12": "2W",
-      "2,14": "3L",
-      "3,3": "2W",
-      "3,7": "3L",
-      "3,11": "2W",
-      "4,0": "2L",
-      "4,4": "2W",
-      "4,10": "2W",
-      "4,14": "2L",
-      "5,1": "2L",
-      "5,5": "3L",
-      "5,9": "3L",
-      "5,13": "2L",
-      "6,2": "3L",
-      "6,6": "2L",
-      "6,8": "2L",
-      "6,12": "3L",
-      "7,3": "3L",
-      "7,7": "CENTER",
-      "7,11": "3L",
-      "8,2": "3L",
-      "8,6": "2L",
-      "8,8": "2L",
-      "8,12": "3L",
-      "9,1": "2L",
-      "9,5": "3L",
-      "9,9": "3L",
-      "9,13": "2L",
-      "10,0": "2L",
-      "10,4": "2W",
-      "10,10": "2W",
-      "10,14": "2L",
-      "11,3": "2W",
-      "11,7": "3L",
-      "11,11": "2W",
-      "12,0": "3L",
-      "12,2": "2W",
-      "12,6": "3L",
-      "12,8": "3L",
-      "12,12": "2W",
-      "12,14": "3L",
-      "13,1": "2W",
-      "13,5": "2L",
-      "13,9": "2L",
-      "13,13": "2W",
-      "14,0": "3W",
-      "14,2": "3L",
-      "14,4": "2L",
-      "14,10": "2L",
-      "14,12": "3L",
-      "14,14": "3W",
-    },
-  },
 };
+
+function UnseenTileTracker({ board, rack, activePreset }) {
+  const unseen = useMemo(() => {
+    const counts = { ...activePreset.distribution };
+    let total = 0;
+
+    for (const k in counts) total += counts[k];
+
+    for (let r = 0; r < 15; r++) {
+      for (let c = 0; c < 15; c++) {
+        const val = board[r][c];
+        if (val) {
+          const upper = val.toUpperCase();
+          if (counts[upper] !== undefined && counts[upper] > 0) {
+            counts[upper]--;
+            total--;
+          }
+        }
+      }
+    }
+
+    const rackChars = rack.toUpperCase().split("");
+    for (const ch of rackChars) {
+      const mapped = ["?", ".", "0", "*", "_"].includes(ch) ? "?" : ch;
+      if (counts[mapped] !== undefined && counts[mapped] > 0) {
+        counts[mapped]--;
+        total--;
+      }
+    }
+
+    return { counts, total };
+  }, [board, rack, activePreset]);
+
+  return (
+    <div
+      className="win98-inset"
+      style={{ marginTop: "10px", backgroundColor: "#e0e0e0" }}
+    >
+      <div
+        style={{
+          fontSize: "11px",
+          fontWeight: "bold",
+          marginBottom: "6px",
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
+        <span>Unseen Tile Tracker (Bag + Opponent)</span>
+        <span style={{ color: "#000080" }}>Remaining: {unseen.total}</span>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "2px",
+          fontSize: "10px",
+        }}
+      >
+        {Object.entries(unseen.counts).map(([ch, count]) => (
+          <div
+            key={ch}
+            style={{
+              width: "22px",
+              textAlign: "center",
+              backgroundColor: count === 0 ? "#c0c0c0" : "var(--cell-tile-bg)",
+              color: count === 0 ? "#707070" : "#000",
+              border: "1px solid var(--w98-border-dark)",
+              padding: "2px 0",
+            }}
+          >
+            <strong>{ch}</strong>
+            <br />
+            {count}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const BoardCell = React.memo(
   ({
@@ -441,7 +359,9 @@ const BoardCell = React.memo(
 
     return (
       <div
-        className={`board-cell ${cellClass} ${isSelected ? "selected" : ""} ${isInActiveLine && !isSelected ? "in-line-highlight" : ""}`}
+        className={`board-cell ${cellClass} ${isSelected ? "selected" : ""} ${
+          isInActiveLine && !isSelected ? "in-line-highlight" : ""
+        }`}
         onClick={onClick}
         style={{
           position: "relative",
@@ -503,10 +423,15 @@ const ResultCard = React.memo(
     onLeave,
     onClick,
   }) => {
+    const isExch = play.dir === "EXCH";
+
     return (
       <div
         className="result-card"
-        style={{ cursor: "pointer" }}
+        style={{
+          cursor: "pointer",
+          backgroundColor: isExch ? "#f4f0ff" : undefined,
+        }}
         onMouseEnter={() => onHover(play)}
         onMouseLeave={onLeave}
         onClick={() => onClick(play)}
@@ -526,7 +451,11 @@ const ResultCard = React.memo(
                 .toUpperCase()
                 .split("")
                 .map((ch, idx) => (
-                  <div key={idx} className="scrabble-tile-mini">
+                  <div
+                    key={idx}
+                    className="scrabble-tile-mini"
+                    style={{ opacity: isExch ? 0.6 : 1 }}
+                  >
                     <span>{ch}</span>
                     <sub className="tile-score-sub">
                       {activePreset?.scores?.[ch.toLowerCase()] ?? 0}
@@ -535,58 +464,90 @@ const ResultCard = React.memo(
                 ))}
             </div>
 
-            {inTwl ? (
-              <span
-                className="badge-legal"
-                style={{ fontSize: "8px", padding: "1px 3px" }}
-              >
-                TWL
-              </span>
-            ) : (
-              <span
-                className="badge-illegal"
-                style={{ fontSize: "8px", padding: "1px 3px" }}
-              >
-                NO-TWL
-              </span>
-            )}
-            {inSowpods ? (
-              <span
-                className="badge-legal"
-                style={{ fontSize: "8px", padding: "1px 3px" }}
-              >
-                CSW
-              </span>
-            ) : (
-              <span
-                className="badge-illegal"
-                style={{ fontSize: "8px", padding: "1px 3px" }}
-              >
-                NO-CSW
-              </span>
+            {!isExch && (
+              <>
+                {inTwl ? (
+                  <span
+                    className="badge-legal"
+                    style={{ fontSize: "8px", padding: "1px 3px" }}
+                  >
+                    TWL
+                  </span>
+                ) : (
+                  <span
+                    className="badge-illegal"
+                    style={{ fontSize: "8px", padding: "1px 3px" }}
+                  >
+                    NO-TWL
+                  </span>
+                )}
+                {inSowpods ? (
+                  <span
+                    className="badge-legal"
+                    style={{ fontSize: "8px", padding: "1px 3px" }}
+                  >
+                    CSW
+                  </span>
+                ) : (
+                  <span
+                    className="badge-illegal"
+                    style={{ fontSize: "8px", padding: "1px 3px" }}
+                  >
+                    NO-CSW
+                  </span>
+                )}
+              </>
             )}
           </div>
           <div style={{ fontSize: "11px", opacity: 0.9 }}>
-            <strong>{notation}</strong> &bull; Row {rowNum}, Col {colLetter} (
-            {play.dir === "H" ? "Across" : "Down"})
+            <strong>{notation}</strong>{" "}
+            {!isExch &&
+              `• Row ${rowNum}, Col ${colLetter} (${play.dir === "H" ? "Across" : "Down"})`}
+          </div>
+          <div style={{ fontSize: "10px", marginTop: "3px", color: "#444" }}>
+            {isExch ? "Kept" : "Leave"}:{" "}
+            <strong style={{ letterSpacing: "1px" }}>{play.leave}</strong> (
+            <span
+              style={{
+                color: play.leaveEquity >= 0 ? "#1b5e20" : "#b71c1c",
+                fontWeight: "bold",
+              }}
+            >
+              {play.leaveEquity >= 0
+                ? `+${play.leaveEquity}`
+                : play.leaveEquity}{" "}
+              eq
+            </span>
+            )
           </div>
         </div>
 
-        <div style={{ textAlign: "right" }}>
+        <div style={{ textAlign: "right", minWidth: "90px" }}>
           <div
             style={{
               fontSize: "14px",
               fontWeight: "bold",
-              color: "#008000",
+              color: isExch ? "#606060" : "#008000",
             }}
           >
             {play.score} PTS
           </div>
-          {play.exposes3W ? (
-            <span className="badge-risk-high">EXPOSES 3W</span>
-          ) : (
-            <span className="badge-risk-safe">SAFE LEAVE</span>
-          )}
+          <div
+            style={{
+              fontSize: "10px",
+              color: "#333",
+              fontWeight: "bold",
+              marginBottom: "2px",
+            }}
+          >
+            Val: {play.totalVal}
+          </div>
+          {!isExch &&
+            (play.exposes3W ? (
+              <span className="badge-risk-high">EXPOSES 3W</span>
+            ) : (
+              <span className="badge-risk-safe">SAFE LEAVE</span>
+            ))}
         </div>
       </div>
     );
@@ -594,11 +555,16 @@ const ResultCard = React.memo(
 );
 ResultCard.displayName = "ResultCard";
 
-function FloatingDefinitionTooltip({ hoveredPlay, twlSet, sowpodsSet }) {
+function FloatingDefinitionTooltip({
+  hoveredPlay,
+  twlSet,
+  sowpodsSet,
+  localDictionary,
+}) {
   const tooltipRef = useRef(null);
 
   useEffect(() => {
-    if (!hoveredPlay) return;
+    if (!hoveredPlay || hoveredPlay.dir === "EXCH") return;
 
     const handleMouseMove = (e) => {
       if (!tooltipRef.current) return;
@@ -614,7 +580,7 @@ function FloatingDefinitionTooltip({ hoveredPlay, twlSet, sowpodsSet }) {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [hoveredPlay]);
 
-  if (!hoveredPlay) return null;
+  if (!hoveredPlay || hoveredPlay.dir === "EXCH") return null;
 
   const w = hoveredPlay.word.toLowerCase();
   const inTwl = twlSet ? twlSet.has(w) : false;
@@ -689,12 +655,13 @@ function FloatingDefinitionTooltip({ hoveredPlay, twlSet, sowpodsSet }) {
 export default function ScrabbleSolverV3() {
   const [activePresetKey, setActivePresetKey] = useState("plato_literati");
 
-  // Dictionary Toggles
   const [useTwl, setUseTwl] = useState(true);
   const [useSowpods, setUseSowpods] = useState(false);
+  const [sortMode, setSortMode] = useState("value");
 
   const [twlSet, setTwlSet] = useState(null);
   const [sowpodsSet, setSowpodsSet] = useState(null);
+  const [localDictionary, setLocalDictionary] = useState({});
 
   const [loading, setLoading] = useState(true);
   const [isSolving, setIsSolving] = useState(false);
@@ -704,7 +671,6 @@ export default function ScrabbleSolverV3() {
   const [isBoardLocked, setIsBoardLocked] = useState(true);
   const [typingDir, setTypingDir] = useState("H");
 
-  // History Stack for Undo
   const [history, setHistory] = useState([]);
 
   const [board, setBoard] = useState(() =>
@@ -723,12 +689,10 @@ export default function ScrabbleSolverV3() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      workerRef.current = new Worker(
-        new URL("./solverWorker.js", import.meta.url),
-      );
+      workerRef.current = new Worker("/solverWorker.js");
 
       workerRef.current.onmessage = (e) => {
-        setCandidatePlays(e.data);
+        setCandidatePlays(e.data || []);
         setIsSolving(false);
       };
     }
@@ -737,8 +701,9 @@ export default function ScrabbleSolverV3() {
     };
   }, []);
 
-  // Preload text wordlists for Referee and definition checking
   useEffect(() => {
+    let isMounted = true;
+
     const fetchList = async (paths, fallbackUrl) => {
       for (const p of paths) {
         try {
@@ -771,23 +736,37 @@ export default function ScrabbleSolverV3() {
     };
 
     const loadAll = async () => {
-      const [sow, twl] = await Promise.all([
-        fetchList(
-          ["/sowpods.txt", "/scrabble_words.txt"],
-          "https://raw.githubusercontent.com/raun/Scrabble/master/words.txt",
-        ),
-        fetchList(
-          ["/twl06.txt", "/naspa2023.txt"],
-          "https://raw.githubusercontent.com/jesstess/Scrabble/master/scrabble/twl06.txt",
-        ),
-      ]);
+      try {
+        const [sow, twl, dictRes] = await Promise.all([
+          fetchList(
+            ["/sowpods.txt", "/scrabble_words.txt"],
+            "https://raw.githubusercontent.com/raun/Scrabble/master/words.txt",
+          ),
+          fetchList(
+            ["/twl06.txt", "/naspa2023.txt"],
+            "https://raw.githubusercontent.com/jesstess/Scrabble/master/scrabble/twl06.txt",
+          ),
+          fetch("/dictionary_compact.json")
+            .then((res) => (res.ok ? res.json() : {}))
+            .catch(() => ({})),
+        ]);
 
-      setSowpodsSet(new Set(sow));
-      setTwlSet(new Set(twl));
-      setLoading(false);
+        if (isMounted) {
+          setSowpodsSet(new Set(sow));
+          setTwlSet(new Set(twl));
+          setLocalDictionary(dictRes);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Failed to load dictionaries", err);
+        if (isMounted) setLoading(false);
+      }
     };
 
     loadAll();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handlePresetChange = (key) => {
@@ -802,7 +781,6 @@ export default function ScrabbleSolverV3() {
     }
   };
 
-  // Dispatch to Zero-GC GADDAG Worker
   useEffect(() => {
     if (!deferredRack.trim()) {
       setCandidatePlays([]);
@@ -817,10 +795,10 @@ export default function ScrabbleSolverV3() {
       activePreset,
       useTwl,
       useSowpods,
+      sortMode,
     });
-  }, [deferredBoard, deferredRack, activePreset, useTwl, useSowpods]);
+  }, [deferredBoard, deferredRack, activePreset, useTwl, useSowpods, sortMode]);
 
-  // Undo Handler
   const handleUndo = useCallback(() => {
     setHistory((prevHistory) => {
       if (prevHistory.length === 0) return prevHistory;
@@ -832,7 +810,10 @@ export default function ScrabbleSolverV3() {
     });
   }, []);
 
-  // Direct Arrow Movement & Dedicated Direction Toggling (Spacebar/Button Only)
+  const pushHistory = useCallback(() => {
+    setHistory((prev) => [...prev.slice(-49), { board, rack }]);
+  }, [board, rack]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
@@ -858,22 +839,19 @@ export default function ScrabbleSolverV3() {
         return;
       }
 
-      if (e.key >= "a" && e.key <= "z") {
-        setHistory((prev) => [...prev, { board, rack }]);
+      if (/^[a-zA-Z]$/.test(e.key)) {
+        pushHistory();
         setBoard((prev) => {
           const next = prev.map((row) => [...row]);
           next[r][c] = e.key.toUpperCase();
           return next;
         });
 
-        if (typingDir === "H") {
-          if (c < 14) setSelectedCell([r, c + 1]);
-        } else {
-          if (r < 14) setSelectedCell([r + 1, c]);
-        }
+        if (typingDir === "H" && c < 14) setSelectedCell([r, c + 1]);
+        else if (typingDir === "V" && r < 14) setSelectedCell([r + 1, c]);
       } else if (e.key === "Backspace") {
         if (board[r][c]) {
-          setHistory((prev) => [...prev, { board, rack }]);
+          pushHistory();
           setBoard((prev) => {
             const next = prev.map((row) => [...row]);
             next[r][c] = "";
@@ -882,7 +860,7 @@ export default function ScrabbleSolverV3() {
         } else {
           if (typingDir === "H" && c > 0) {
             setSelectedCell([r, c - 1]);
-            setHistory((prev) => [...prev, { board, rack }]);
+            pushHistory();
             setBoard((prev) => {
               const next = prev.map((row) => [...row]);
               next[r][c - 1] = "";
@@ -890,7 +868,7 @@ export default function ScrabbleSolverV3() {
             });
           } else if (typingDir === "V" && r > 0) {
             setSelectedCell([r - 1, c]);
-            setHistory((prev) => [...prev, { board, rack }]);
+            pushHistory();
             setBoard((prev) => {
               const next = prev.map((row) => [...row]);
               next[r - 1][c] = "";
@@ -899,7 +877,7 @@ export default function ScrabbleSolverV3() {
           }
         }
       } else if (e.key === "Delete") {
-        setHistory((prev) => [...prev, { board, rack }]);
+        pushHistory();
         setBoard((prev) => {
           const next = prev.map((row) => [...row]);
           next[r][c] = "";
@@ -922,20 +900,20 @@ export default function ScrabbleSolverV3() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedCell, isBoardLocked, typingDir, board, rack, handleUndo]);
+  }, [selectedCell, isBoardLocked, typingDir, board, handleUndo, pushHistory]);
 
-  const clearBoard = () => {
-    setHistory((prev) => [...prev, { board, rack }]);
+  const clearBoard = useCallback(() => {
+    pushHistory();
     setBoard(
       Array(15)
         .fill(null)
         .map(() => Array(15).fill("")),
     );
     setHoveredPlay(null);
-  };
+  }, [pushHistory]);
 
   const previewMap = useMemo(() => {
-    if (!hoveredPlay) return {};
+    if (!hoveredPlay || hoveredPlay.dir === "EXCH") return {};
     const map = {};
     const { word, row, col, dir } = hoveredPlay;
     for (let i = 0; i < word.length; i++) {
@@ -948,39 +926,37 @@ export default function ScrabbleSolverV3() {
 
   const applyPlay = useCallback(
     (play) => {
-      setHistory((prev) => [...prev, { board, rack }]);
+      pushHistory();
 
-      setBoard((prev) => {
-        const next = prev.map((row) => [...row]);
-        for (let i = 0; i < play.word.length; i++) {
-          const r = play.dir === "V" ? play.row + i : play.row;
-          const c = play.dir === "H" ? play.col + i : play.col;
-          next[r][c] = play.word[i].toUpperCase();
-        }
-        return next;
-      });
+      if (play.dir !== "EXCH") {
+        setBoard((prev) => {
+          const next = prev.map((row) => [...row]);
+          for (let i = 0; i < play.word.length; i++) {
+            const r = play.dir === "V" ? play.row + i : play.row;
+            const c = play.dir === "H" ? play.col + i : play.col;
+            next[r][c] = play.word[i].toUpperCase();
+          }
+          return next;
+        });
+      }
 
       setRack((prevRack) => {
         let currentRack = prevRack.toUpperCase().split("");
         for (let i = 0; i < play.word.length; i++) {
-          const r = play.dir === "V" ? play.row + i : play.row;
-          const c = play.dir === "H" ? play.col + i : play.col;
-          if (!board[r][c]) {
-            const char = play.word[i].toUpperCase();
-            const idx = currentRack.indexOf(char);
-            if (idx !== -1) {
-              currentRack.splice(idx, 1);
-            } else {
-              const wildcardIdx = currentRack.findIndex(
-                (ch) =>
-                  ch === "?" ||
-                  ch === "." ||
-                  ch === "0" ||
-                  ch === "*" ||
-                  ch === "_",
-              );
-              if (wildcardIdx !== -1) currentRack.splice(wildcardIdx, 1);
-            }
+          if (play.dir !== "EXCH") {
+            const r = play.dir === "V" ? play.row + i : play.row;
+            const c = play.dir === "H" ? play.col + i : play.col;
+            if (board[r][c]) continue;
+          }
+          const char = play.word[i].toUpperCase();
+          const idx = currentRack.indexOf(char);
+          if (idx !== -1) {
+            currentRack.splice(idx, 1);
+          } else {
+            const wildcardIdx = currentRack.findIndex((ch) =>
+              ["?", ".", "0", "*", "_"].includes(ch),
+            );
+            if (wildcardIdx !== -1) currentRack.splice(wildcardIdx, 1);
           }
         }
         return currentRack.join("");
@@ -988,35 +964,31 @@ export default function ScrabbleSolverV3() {
 
       setHoveredPlay(null);
     },
-    [board, rack],
+    [board, pushHistory],
   );
 
   const handleCellClick = useCallback(
     (r, c) => {
       if (isBoardLocked) setIsBoardLocked(false);
-
       setSelectedCell((prev) => {
         if (!prev) return [r, c];
-        const [prevR, prevC] = prev;
-
-        if (prevR === r && prevC === c) {
+        if (prev[0] === r && prev[1] === c) {
           setTypingDir((d) => (d === "H" ? "V" : "H"));
           return [r, c];
         }
-
         return [r, c];
       });
     },
     [isBoardLocked],
   );
 
-  const handleHoverPlay = useCallback((play) => {
-    setHoveredPlay(play);
-  }, []);
+  const handleHoverPlay = useCallback((play) => setHoveredPlay(play), []);
+  const handleLeavePlay = useCallback(() => setHoveredPlay(null), []);
 
-  const handleLeavePlay = useCallback(() => {
-    setHoveredPlay(null);
-  }, []);
+  const handleRackChange = (val) => {
+    const sanitized = val.toUpperCase().replace(/[^A-Z?.*_0]/g, "");
+    setRack(sanitized);
+  };
 
   return (
     <div className="win98-body">
@@ -1126,6 +1098,36 @@ export default function ScrabbleSolverV3() {
                     SOWPODS
                   </label>
                 </div>
+
+                {/* Ranking Toggle Dropdown */}
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  <label
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: "bold",
+                      color: "#b71c1c",
+                    }}
+                  >
+                    Sort By:
+                  </label>
+                  <select
+                    className="win98-input"
+                    style={{
+                      width: "auto",
+                      cursor: "pointer",
+                      padding: "2px 6px",
+                    }}
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value)}
+                  >
+                    <option value="value">
+                      Strategic Value (Score + Leave)
+                    </option>
+                    <option value="score">Highest Score (Greedy)</option>
+                  </select>
+                </div>
               </div>
 
               <div style={{ display: "flex", gap: "8px" }}>
@@ -1195,14 +1197,12 @@ export default function ScrabbleSolverV3() {
                             selectedCell &&
                             selectedCell[0] === r &&
                             selectedCell[1] === c;
-
                           const isInActiveLine =
                             !isBoardLocked &&
                             selectedCell &&
                             (typingDir === "H"
                               ? selectedCell[0] === r
                               : selectedCell[1] === c);
-
                           const previewChar = previewMap[`${r},${c}`];
                           const premium = activePreset.premiums[`${r},${c}`];
 
@@ -1230,6 +1230,7 @@ export default function ScrabbleSolverV3() {
                   twlSet={twlSet}
                   sowpodsSet={sowpodsSet}
                   activePreset={activePreset}
+                  localDictionary={localDictionary}
                 />
               </div>
 
@@ -1256,11 +1257,11 @@ export default function ScrabbleSolverV3() {
                     type="text"
                     className="win98-input"
                     value={rack}
-                    onChange={(e) => setRack(e.target.value.toUpperCase())}
+                    onChange={(e) => handleRackChange(e.target.value)}
                     placeholder="E.g. REOPMAJ? or ? for blank"
                   />
 
-                  {/* Tray Display: Blank tiles render empty with no subscript */}
+                  {/* Tray Display */}
                   <div className="rack-tray">
                     {rack.trim().length === 0 ? (
                       <span
@@ -1300,6 +1301,12 @@ export default function ScrabbleSolverV3() {
                   </div>
                 </div>
 
+                <UnseenTileTracker
+                  board={board}
+                  rack={rack}
+                  activePreset={activePreset}
+                />
+
                 <div className="win98-window" style={{ flex: 1, margin: 0 }}>
                   <div className="win98-titlebar">
                     <span>Ranked Strategic Plays</span>
@@ -1335,13 +1342,14 @@ export default function ScrabbleSolverV3() {
                       </div>
                     ) : (
                       candidatePlays.slice(0, 50).map((play, idx) => {
-                        const colLetter = COLUMNS[play.col];
-                        const rowNum = play.row + 1;
-                        const notation =
-                          play.dir === "H"
+                        const isExch = play.dir === "EXCH";
+                        const colLetter = isExch ? "" : COLUMNS[play.col];
+                        const rowNum = isExch ? "" : play.row + 1;
+                        const notation = isExch
+                          ? "EXCHANGE"
+                          : play.dir === "H"
                             ? `${rowNum}${colLetter}`
                             : `${colLetter}${rowNum}`;
-
                         const w = play.word.toLowerCase();
                         const inTwl = twlSet ? twlSet.has(w) : false;
                         const inSowpods = sowpodsSet
@@ -1376,6 +1384,7 @@ export default function ScrabbleSolverV3() {
           hoveredPlay={hoveredPlay}
           twlSet={twlSet}
           sowpodsSet={sowpodsSet}
+          localDictionary={localDictionary}
         />
       </div>
     </div>

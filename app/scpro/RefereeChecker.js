@@ -1,9 +1,13 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import localDictionary from "./dictionary_compact.json";
 
-export default function RefereeChecker({ twlSet, sowpodsSet, activePreset }) {
+export default function RefereeChecker({
+  twlSet,
+  sowpodsSet,
+  activePreset,
+  localDictionary = {},
+}) {
   const [challengeInput, setChallengeInput] = useState("");
   // Modes: "both" (either lexicon), "twl" (Plato / US only), "sowpods" (CSW International only)
   const [lexiconMode, setLexiconMode] = useState("both");
@@ -18,6 +22,8 @@ export default function RefereeChecker({ twlSet, sowpodsSet, activePreset }) {
     const isLoaded = Boolean(twlSet || sowpodsSet);
     const inTwl = twlSet ? twlSet.has(w) : false;
     const inSowpods = sowpodsSet ? sowpodsSet.has(w) : false;
+
+    // Now reading from the asynchronously loaded prop instead of a static import
     const inJson = Boolean(localDictionary[w]);
     const def = localDictionary[w] || null;
 
@@ -45,7 +51,14 @@ export default function RefereeChecker({ twlSet, sowpodsSet, activePreset }) {
       def,
       baseScore,
     };
-  }, [challengeInput, twlSet, sowpodsSet, activePreset, lexiconMode]);
+  }, [
+    challengeInput,
+    twlSet,
+    sowpodsSet,
+    activePreset,
+    lexiconMode,
+    localDictionary,
+  ]);
 
   return (
     <div className="win98-window" style={{ marginTop: "12px" }}>
