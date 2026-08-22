@@ -521,7 +521,6 @@ const ResultCard = React.memo(
               marginBottom: "4px",
             }}
           >
-            {/* Larger Scrabble Mini Tile Display */}
             <div style={{ display: "flex", gap: "2px" }}>
               {play.word
                 .toUpperCase()
@@ -855,7 +854,7 @@ export default function ScrabbleSolverV3() {
     });
   }, []);
 
-  // Keyboard navigation & Shortcuts
+  // Direct Arrow Movement & Dedicated Direction Toggling (Spacebar/Button Only)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
@@ -875,12 +874,14 @@ export default function ScrabbleSolverV3() {
       if (!selectedCell) return;
       const [r, c] = selectedCell;
 
+      // 1. Spacebar exclusively toggles orientation in place
       if (e.key === " ") {
         e.preventDefault();
         setTypingDir((d) => (d === "H" ? "V" : "H"));
         return;
       }
 
+      // 2. Letters place and auto-advance in the active direction
       if (e.key >= "a" && e.key <= "z") {
         setHistory((prev) => [...prev, { board, rack }]);
         setBoard((prev) => {
@@ -894,7 +895,9 @@ export default function ScrabbleSolverV3() {
         } else {
           if (r < 14) setSelectedCell([r + 1, c]);
         }
-      } else if (e.key === "Backspace") {
+      }
+      // 3. Backspace & Delete
+      else if (e.key === "Backspace") {
         if (board[r][c]) {
           setHistory((prev) => [...prev, { board, rack }]);
           setBoard((prev) => {
@@ -928,22 +931,20 @@ export default function ScrabbleSolverV3() {
           next[r][c] = "";
           return next;
         });
-      } else if (e.key === "ArrowRight") {
+      }
+      // 4. Arrow keys ALWAYS immediately move cursor up/down/left/right
+      else if (e.key === "ArrowRight") {
         e.preventDefault();
-        if (typingDir !== "H") setTypingDir("H");
-        else if (c < 14) setSelectedCell([r, c + 1]);
+        if (c < 14) setSelectedCell([r, c + 1]);
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
-        if (typingDir !== "H") setTypingDir("H");
-        else if (c > 0) setSelectedCell([r, c - 1]);
+        if (c > 0) setSelectedCell([r, c - 1]);
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        if (typingDir !== "V") setTypingDir("V");
-        else if (r < 14) setSelectedCell([r + 1, c]);
+        if (r < 14) setSelectedCell([r + 1, c]);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        if (typingDir !== "V") setTypingDir("V");
-        else if (r > 0) setSelectedCell([r - 1, c]);
+        if (r > 0) setSelectedCell([r - 1, c]);
       }
     };
 
@@ -1026,17 +1027,13 @@ export default function ScrabbleSolverV3() {
         if (!prev) return [r, c];
         const [prevR, prevC] = prev;
 
+        // Clicking the already-selected cell toggles direction
         if (prevR === r && prevC === c) {
           setTypingDir((d) => (d === "H" ? "V" : "H"));
           return [r, c];
         }
 
-        if (r === prevR + 1 && c === prevC) {
-          setTypingDir("V");
-        } else if (r === prevR && c === prevC + 1) {
-          setTypingDir("H");
-        }
-
+        // Clicking a different cell moves cursor without altering direction
         return [r, c];
       });
     },
