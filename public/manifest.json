@@ -1,0 +1,17 @@
+{
+  "name": "Scrabble Pro Solver",
+  "short_name": "ScrabblePro",
+  "description": "A Windows 98-themed Scrabble Engine and Board Analyzer",
+  "start_url": "/scpro",
+  "display": "standalone",
+  "background_color": "#008080",
+  "theme_color": "#008080",
+  "icons": [
+    {
+      "src": "/scrabble-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

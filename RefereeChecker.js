@@ -1,27 +1,29 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import localDictionary from "./dictionary_compact.json";
+import React, { useState, useEffect } from "react";
 
-export default function RefereeChecker({ twlSet, sowpodsSet, activePreset }) {
+export default function RefereeChecker({
+  checkWord,
+  wordCheckResult,
+  activePreset,
+  localDictionary = {},
+}) {
   const [challengeInput, setChallengeInput] = useState("");
-  // Modes: "both" (either lexicon), "twl" (Plato / US only), "sowpods" (CSW International only)
   const [lexiconMode, setLexiconMode] = useState("both");
+  const [challengeResult, setChallengeResult] = useState(null);
 
-  const challengeResult = useMemo(() => {
+  useEffect(() => {
+    if (!wordCheckResult) return;
+    
+    const { word, inTwl, inSowpods } = wordCheckResult;
     const raw = challengeInput.trim().toLowerCase();
-    if (!raw) return null;
-
     const w = raw.replace(/[^a-z]/g, "");
-    if (!w) return null;
-
-    const isLoaded = Boolean(twlSet || sowpodsSet);
-    const inTwl = twlSet ? twlSet.has(w) : false;
-    const inSowpods = sowpodsSet ? sowpodsSet.has(w) : false;
+    
+    if (word !== w) return;
+    
     const inJson = Boolean(localDictionary[w]);
     const def = localDictionary[w] || null;
 
-    // Evaluate validity based on the selected mode
     let isAccepted = false;
     if (lexiconMode === "twl") {
       isAccepted = inTwl;
@@ -33,19 +35,36 @@ export default function RefereeChecker({ twlSet, sowpodsSet, activePreset }) {
 
     const baseScore = w
       .split("")
-      .reduce((sum, c) => sum + (activePreset?.scores?.[c] || 0), 0);
+      .reduce((sum, c) => sum + (activePreset?.scores?.[c.toLowerCase()] || 0), 0);
 
-    return {
+    setChallengeResult({
       word: w,
-      isLoaded,
+      isLoaded: true,
       inTwl,
       inSowpods,
       inJson,
       isAccepted,
       def,
       baseScore,
-    };
-  }, [challengeInput, twlSet, sowpodsSet, activePreset, lexiconMode]);
+    });
+  }, [wordCheckResult, challengeInput, lexiconMode, localDictionary, activePreset]);
+
+  useEffect(() => {
+    const raw = challengeInput.trim().toLowerCase();
+    const w = raw.replace(/[^a-z]/g, "");
+    if (!w) {
+      setChallengeResult(null);
+      return;
+    }
+    
+    setChallengeResult({ word: w, isLoaded: false });
+    
+    const debounce = setTimeout(() => {
+       if (checkWord) checkWord(w);
+    }, 300);
+    
+    return () => clearTimeout(debounce);
+  }, [challengeInput, checkWord]);
 
   return (
     <div className="win98-window" style={{ marginTop: "12px" }}>
@@ -53,7 +72,6 @@ export default function RefereeChecker({ twlSet, sowpodsSet, activePreset }) {
         <span>Referee &bull; Multi-Lexicon Challenge & Verification</span>
       </div>
       <div className="win98-content" style={{ padding: "8px" }}>
-        {/* Lexicon Selection Radio Buttons */}
         <div
           className="win98-inset"
           style={{
@@ -121,7 +139,6 @@ export default function RefereeChecker({ twlSet, sowpodsSet, activePreset }) {
           </label>
         </div>
 
-        {/* Input Box */}
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <input
             type="text"
@@ -141,7 +158,6 @@ export default function RefereeChecker({ twlSet, sowpodsSet, activePreset }) {
           )}
         </div>
 
-        {/* Challenge Result Display */}
         {challengeResult && (
           <div
             className="win98-inset"

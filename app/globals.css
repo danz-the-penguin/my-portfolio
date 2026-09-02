@@ -146,6 +146,35 @@
 }
 
 /* ==========================================================================
+   5.5 PALETTE OVERRIDES: GRAB
+   --------------------------------------------------------------------------
+   - Grab Green (#02B14F) & White.
+   ========================================================================== */
+[data-theme="grab"][data-mode="light"] {
+  --bg-main: #ffffff;
+  --bg-card: #f8fafc;
+  --text-main: #000000;
+  --text-muted: #4b5563;
+  --border-color: #e2e8f0;
+  --accent: #02b14f;
+  --tag-bg: #e2e8f0;
+  --tag-border: #cbd5e1;
+  --heading-gradient: linear-gradient(135deg, #02b14f 0%, #018a3d 100%);
+}
+
+[data-theme="grab"][data-mode="dark"] {
+  --bg-main: #000000;
+  --bg-card: #111111;
+  --text-main: #ffffff;
+  --text-muted: #9ca3af;
+  --border-color: #333333;
+  --accent: #02b14f;
+  --tag-bg: #1f2937;
+  --tag-border: #374151;
+  --heading-gradient: linear-gradient(135deg, #02b14f 0%, #10b981 100%);
+}
+
+/* ==========================================================================
    6. WALLPAPER CLEANUP FOR ALTERNATE THEMES
    --------------------------------------------------------------------------
    - Ensures non-metallic themes use flat background colors rather than 
@@ -153,7 +182,8 @@
    ========================================================================== */
 [data-theme="cyberpunk"],
 [data-theme="nordic"],
-[data-theme="emerald"] {
+[data-theme="emerald"],
+[data-theme="grab"] {
   --bg-image: none !important;
 }
 
@@ -230,4 +260,163 @@ a {
 /* External link arrow micro-animation on hover */
 .project-card-link:hover .link-arrow {
   transform: translate(2px, -2px);
+}
+
+/* ==========================================================================
+   9. RAINBOW ANIMATED CARD BORDERS
+   --------------------------------------------------------------------------
+   - Animated rainbow gradient on card borders when not hovered.
+   ========================================================================== */
+/* Setup the custom angle property for the conic-gradient animation */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* 
+  To change the SPEED or DIRECTION of the rotation:
+  1. Change 360deg to -360deg for counter-clockwise.
+*/
+@keyframes rainbow-spin {
+  0% {
+    --angle: 0deg;
+  }
+  100% {
+    --angle: 360deg;
+  }
+}
+
+.rainbow-card {
+  position: relative;
+}
+
+.rainbow-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid transparent;
+  border-radius: inherit;
+
+  /* 
+    To change the COLORS of the rainbow, modify the hex codes below!
+    Make sure the first and last colors are the same so it loops seamlessly.
+  */
+  background: conic-gradient(
+      from var(--angle),
+      #ff0000,
+      #ff7f00,
+      #ffff00,
+      #00ff00,
+      #0000ff,
+      #4b0082,
+      #9400d3,
+      #ff0000
+    )
+    border-box;
+
+  /* 
+    To change the DURATION of the animation, change "4s" to your desired time.
+  */
+  animation: rainbow-spin 4s linear infinite;
+
+  -webkit-mask:
+    linear-gradient(#fff 0 0) padding-box,
+    linear-gradient(#fff 0 0) border-box;
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+}
+
+/* Hide rainbow on hover */
+.rainbow-card:hover::before {
+  opacity: 0;
+}
+
+/* ==========================================================================
+   10. RAINBOW ANIMATED BUTTON BORDERS
+   --------------------------------------------------------------------------
+   - Animated rainbow gradient on Resume Buttons.
+   - Separate from the card animation so it can be customized independently.
+   ========================================================================== */
+@property --angle-btn {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rainbow-spin-btn {
+  0% {
+    --angle-btn: 0deg;
+  }
+  100% {
+    --angle-btn: 360deg;
+  }
+}
+
+.rainbow-button {
+  position: relative;
+}
+
+.rainbow-button::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid transparent;
+  border-radius: inherit;
+
+  /* You can change the button's rainbow colors here! */
+  background: conic-gradient(
+      from var(--angle-btn),
+      #ff0000,
+      #ff7f00,
+      #ffff00,
+      #00ff00,
+      #0000ff,
+      #4b0082,
+      #9400d3,
+      #ff0000
+    )
+    border-box;
+
+  /* Change the speed of the button border spin here */
+  animation: rainbow-spin-btn 3s linear infinite;
+
+  -webkit-mask:
+    linear-gradient(#fff 0 0) padding-box,
+    linear-gradient(#fff 0 0) border-box;
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+}
+
+/* Hide rainbow on hover */
+.rainbow-button:hover::before {
+  opacity: 0;
+}
+
+/* ==========================================================================
+   11. RAINBOW FX TOGGLE (from ThemeSwitcher)
+   --------------------------------------------------------------------------
+   - Disable rainbow borders and restore standard borders when FX is off.
+   ========================================================================== */
+html[data-rainbow="off"] .rainbow-card::before,
+html[data-rainbow="off"] .rainbow-button::before {
+  display: none !important;
+}
+
+html[data-rainbow="off"] .rainbow-card,
+html[data-rainbow="off"] .rainbow-button {
+  border-color: var(--border-color) !important;
+}
+
+html[data-rainbow="off"] .rainbow-card:hover,
+html[data-rainbow="off"] .rainbow-button:hover {
+  border-color: var(--accent) !important;
 }

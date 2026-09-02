@@ -64,10 +64,11 @@ const PROJECTS = [
     link: "#",
   },
   {
-    title: "Scrabble Check Lite",
-    description: "scrabble",
+    title: "Scrabble Checker Pro (BETA)",
+    description:
+      "A full-featured interactive Scrabble engine styled in a retro Windows 98 interface. Features dynamic keyboard navigation over a 15x15 board grid with premium tile multipliers (2L, 3L, 2W, 3W, Center), live previewing on hover, auto-updating rack states, and real-time strategic play ranking that evaluates total score alongside board exposure risk (e.g., exposing Triple Word scores). Optimised with useDeferredValue and O(1) set lookups to deliver non-blocking validation against external lexicons.",
     tags: ["html", "css"],
-    link: "https://penguins-portfolio.vercel.app/scl",
+    link: "https://penguins-portfolio.vercel.app/scpro_beta",
   },
   {
     title: "Scrabble Checker Pro",
@@ -106,8 +107,10 @@ function InteractiveCard({ children, style, link, isProjectCard = false }) {
     ...styles.cardBase,
     ...(isProjectCard ? styles.projectCardBase : {}),
     ...style,
-    transform: isHovered ? "translateY(-4px)" : "none",
-    borderColor: isHovered ? "var(--accent)" : "var(--border-color)",
+    transform: isHovered ? "translateY(-4px) scale(1.15)" : "scale(1)",
+    // Elevate z-index on hover so it renders on top of sibling cards
+    zIndex: isHovered ? 20 : 2,
+    borderColor: isHovered ? "var(--accent)" : "transparent",
     boxShadow: isHovered
       ? "0 8px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--accent)"
       : styles.cardBase.boxShadow,
@@ -117,6 +120,7 @@ function InteractiveCard({ children, style, link, isProjectCard = false }) {
   const content = (
     <div
       style={cardStyle}
+      className="rainbow-card"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -165,8 +169,10 @@ function ResumeButton({ href, label }) {
 
   const btnStyle = {
     ...styles.resumeBtn,
-    transform: isHovered ? "translateY(-4px)" : "none",
-    borderColor: isHovered ? "var(--accent)" : "var(--border-color)",
+    transform: isHovered ? "translateY(-4px) scale(1.05)" : "scale(1)",
+    zIndex: isHovered ? 20 : 2,
+    // Make the static border transparent so the rainbow gradient shows through!
+    borderColor: isHovered ? "var(--accent)" : "transparent",
     boxShadow: isHovered
       ? "0 8px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--accent)"
       : "0 4px 12px rgba(0, 0, 0, 0.12)",
@@ -178,6 +184,7 @@ function ResumeButton({ href, label }) {
       target="_blank"
       rel="noopener noreferrer"
       style={btnStyle}
+      className="rainbow-button"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

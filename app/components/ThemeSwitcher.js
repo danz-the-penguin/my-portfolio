@@ -3,6 +3,8 @@
 
 import { useState, useEffect } from "react";
 
+// 1. Define your available theme palettes here.
+// The `id` must exactly match the `[data-theme="YOUR_ID"]` CSS blocks in `app/globals.css`.
 const THEMES = [
   { id: "default", label: "Metallic" },
   { id: "cyberpunk", label: "Cyberpunk" },
@@ -13,22 +15,65 @@ const THEMES = [
 export default function ThemeSwitcher() {
   const [mode, setMode] = useState("dark");
   const [theme, setTheme] = useState("default");
+  const [rainbowOn, setRainbowOn] = useState(true);
 
-  // Synchronize dynamic attributes onto <html>
+  // 1. On mount, read existing preferences from localStorage or System
+  useEffect(() => {
+    const savedMode = localStorage.getItem("theme");
+    if (savedMode) {
+      setMode(savedMode);
+    } else {
+      const systemPrefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+      setMode(systemPrefersDark ? "dark" : "light");
+    }
+
+    const savedTheme = localStorage.getItem("palette");
+    if (savedTheme) setTheme(savedTheme);
+
+    const savedRainbow = localStorage.getItem("rainbow");
+    if (savedRainbow !== null) setRainbowOn(savedRainbow === "on");
+  }, []);
+
+  // 2. Synchronize state changes to <html> and localStorage
   useEffect(() => {
     document.documentElement.setAttribute("data-mode", mode);
+    localStorage.setItem("theme", mode);
+
     document.documentElement.setAttribute("data-theme", theme);
-  }, [mode, theme]);
+    localStorage.setItem("palette", theme);
+
+    document.documentElement.setAttribute(
+      "data-rainbow",
+      rainbowOn ? "on" : "off",
+    );
+    localStorage.setItem("rainbow", rainbowOn ? "on" : "off");
+  }, [mode, theme, rainbowOn]);
 
   return (
     <div style={switcherStyles.bar}>
-      {/* Dark / Light Toggle */}
-      <button
-        onClick={() => setMode(mode === "dark" ? "light" : "dark")}
-        style={switcherStyles.toggleBtn}
-      >
-        {mode === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode"}
-      </button>
+      <div style={switcherStyles.toggleGroup}>
+        {/* Dark / Light Slider */}
+        <ToggleSwitch
+          width="80px"
+          label={mode === "light" ? "Light" : "Dark"}
+          isOn={mode === "dark"}
+          onToggle={() => setMode(mode === "light" ? "dark" : "light")} // Fixed logic here
+          inactiveIcon="🌞"
+          activeIcon="🌚"
+        />
+
+        {/* Rainbow FX Slider */}
+        <ToggleSwitch
+          width="100px"
+          label="Rainbow"
+          isOn={rainbowOn}
+          onToggle={() => setRainbowOn(!rainbowOn)}
+          activeIcon="🌈"
+          inactiveIcon="🌐"
+        />
+      </div>
 
       {/* Palette Selector */}
       <div style={switcherStyles.presetGroup}>
@@ -53,6 +98,8 @@ export default function ThemeSwitcher() {
 
 const switcherStyles = {
   bar: {
+    position: "relative",
+    zIndex: 10,
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
@@ -63,6 +110,10 @@ const switcherStyles = {
     borderRadius: "8px",
     backgroundColor: "var(--bg-card)",
     border: "1px solid var(--border-color)",
+  },
+  toggleGroup: {
+    display: "flex",
+    gap: "8px",
   },
   toggleBtn: {
     padding: "6px 12px",
@@ -88,3 +139,72 @@ const switcherStyles = {
     fontSize: "0.8rem",
   },
 };
+
+// ==========================================
+// 2. TOGGLE SWITCH COMPONENT
+// ==========================================
+function ToggleSwitch({
+  label,
+  isOn,
+  onToggle,
+  activeIcon,
+  inactiveIcon,
+  width = "135px",
+}) {
+  return (
+    <div
+      onClick={onToggle}
+      style={{
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        // You can change the width of the sliders below by modifying the width prop!
+        width: width,
+        height: "28px",
+        backgroundColor: isOn ? "var(--accent)" : "var(--bg-main)",
+        border: "1px solid",
+        borderColor: isOn ? "var(--accent)" : "var(--border-color)",
+        borderRadius: "14px",
+        cursor: "pointer",
+        transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        userSelect: "none",
+      }}
+    >
+      {/* Label Text */}
+      <span
+        style={{
+          position: "absolute",
+          left: isOn ? "12px" : "auto",
+          right: isOn ? "auto" : "12px",
+          fontSize: "0.75rem",
+          fontWeight: "700",
+          color: isOn ? "#fff" : "var(--text-main)",
+          pointerEvents: "none",
+        }}
+      >
+        {label}
+      </span>
+
+      {/* Sliding Circle */}
+      <div
+        style={{
+          position: "absolute",
+          top: "2px",
+          left: isOn ? "calc(100% - 24px)" : "2px",
+          width: "22px",
+          height: "22px",
+          backgroundColor: "#fff",
+          borderRadius: "50%",
+          transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.25)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "0.7rem",
+        }}
+      >
+        {isOn ? activeIcon : inactiveIcon}
+      </div>
+    </div>
+  );
+}

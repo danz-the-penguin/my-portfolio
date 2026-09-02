@@ -8,7 +8,11 @@ import React, {
   useDeferredValue,
   useCallback,
 } from "react";
+import Link from "next/link";
 import "./scrabble.css";
+import { useScrabbleHistory } from "./useScrabbleHistory";
+import { useSolverWorker } from "./useSolverWorker";
+import { useDictionaryWorker } from "./useDictionaryWorker";
 import RefereeChecker from "./RefereeChecker";
 
 const COLUMNS = [
@@ -297,9 +301,10 @@ function UnseenTileTracker({
         for (let c = 0; c < 15; c++) {
           const val = board[r][c];
           if (val) {
-            const upper = val.toUpperCase();
-            if (counts[upper] !== undefined && counts[upper] > 0) {
-              counts[upper]--;
+            const isBlank = val >= 'a' && val <= 'z';
+            const keyToDeduct = isBlank ? '?' : val.toUpperCase();
+            if (counts[keyToDeduct] !== undefined && counts[keyToDeduct] > 0) {
+              counts[keyToDeduct]--;
               total--;
             }
           }
@@ -320,46 +325,27 @@ function UnseenTileTracker({
   }, [board, rack, activePreset, enableIntel, intelMode, manualAvailableTiles]);
 
   return (
-    <div
-      className="win98-inset"
-      style={{ marginTop: "10px", backgroundColor: "#e0e0e0" }}
-    >
-      <div
-        style={{
-          fontSize: "11px",
-          fontWeight: "bold",
-          marginBottom: "8px",
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
+    <div className="unseen-pane">
+      <div className="unseen-header">
         <span>Available Tiles (Bag + Opponent)</span>
         <span style={{ color: "#000080" }}>Total: {unseen.total}</span>
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 8px" }}>
+      <div className="unseen-grid">
         {Object.entries(unseen.counts).map(([ch, count]) => {
           const isZero = count === 0;
           return (
             <div
               key={ch}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "2px",
-                opacity: isZero ? 0.35 : 1,
-                filter: isZero ? "grayscale(100%)" : "none",
-                transition: "opacity 0.2s ease",
-              }}
+              className={`unseen-item ${isZero ? "empty" : ""}`}
             >
               <div
                 className="scrabble-tile-mini"
                 style={{
-                  width: "18px",
+                  width: "20px",
                   height: "22px",
                   fontSize: "11px",
-                  boxShadow: isZero ? "none" : undefined,
-                  border: isZero ? "1px solid #999" : undefined,
+                  boxShadow: "1px 1px 1px rgba(0,0,0,0.4)"
                 }}
               >
                 <span>{ch === "?" ? "" : ch}</span>
@@ -372,14 +358,7 @@ function UnseenTileTracker({
                   </sub>
                 )}
               </div>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: "bold",
-                  color: "#222",
-                  minWidth: "14px",
-                }}
-              >
+              <span className="unseen-count">
                 x{count}
               </span>
             </div>
@@ -389,6 +368,11 @@ function UnseenTileTracker({
     </div>
   );
 }
+
+const TILE_SCORES = {
+  A: 1, B: 3, C: 3, D: 2, E: 1, F: 4, G: 2, H: 4, I: 1, J: 8, K: 5, L: 1, M: 3,
+  N: 1, O: 1, P: 3, Q: 10, R: 1, S: 1, T: 1, U: 1, V: 4, W: 4, X: 8, Y: 4, Z: 10,
+};
 
 const BoardCell = React.memo(
   ({
@@ -403,35 +387,62 @@ const BoardCell = React.memo(
     onClick,
   }) => {
     const cellClass = tileVal ? "" : premium ? `cell-${premium}` : "";
+    
+    let renderTile = null;
+    if (tileVal) {
+      const isBlank = tileVal >= 'a' && tileVal <= 'z';
+      const score = isBlank ? 0 : (TILE_SCORES[tileVal.toUpperCase()] || 0);
+      renderTile = (
+        <div className="cell-tile">
+          {tileVal.toUpperCase()}
+          <span className="tile-score-sub">{score}</span>
+        </div>
+      );
+    } else if (previewChar) {
+      const isBlank = previewChar >= 'a' && previewChar <= 'z';
+      const score = isBlank ? 0 : (TILE_SCORES[previewChar.toUpperCase()] || 0);
+      renderTile = (
+        <div className="cell-preview">
+          {previewChar.toUpperCase()}
+          <span className="tile-score-sub" style={{ color: "#ffffff" }}>{score}</span>
+        </div>
+      );
+    }
+
     return (
       <div
         className={`board-cell ${cellClass} ${isSelected ? "selected" : ""} ${
-          isInActiveLine && !isSelected ? "in-line-highlight" : ""
+          isInActiveLine ? "active-line" : ""
         }`}
-        onClick={onClick}
+        onClick={() => onClick(r, c)}
         style={{
-          position: "relative",
-          backgroundColor:
-            isInActiveLine && !isSelected && !tileVal ? "#e6f0fa" : undefined,
+          borderTop:
+            isSelected || isInActiveLine
+              ? typingDir === "V"
+                ? "2px solid var(--w98-highlight)"
+                : undefined
+              : undefined,
+          borderBottom:
+            isSelected || isInActiveLine
+              ? typingDir === "V"
+                ? "2px solid var(--w98-highlight)"
+                : undefined
+              : undefined,
+          borderLeft:
+            isSelected || isInActiveLine
+              ? typingDir === "H"
+                ? "2px solid var(--w98-highlight)"
+                : undefined
+              : undefined,
+          borderRight:
+            isSelected || isInActiveLine
+              ? typingDir === "H"
+                ? "2px solid var(--w98-highlight)"
+                : undefined
+              : undefined,
         }}
       >
-        {tileVal ? (
-          <div className="cell-tile">{tileVal}</div>
-        ) : previewChar ? (
-          <div
-            className="cell-tile"
-            style={{
-              backgroundColor: "#2e7d32",
-              color: "#ffffff",
-              opacity: 0.85,
-              border: "1px dashed #ffffff",
-            }}
-          >
-            {previewChar}
-          </div>
-        ) : (
-          premium || ""
-        )}
+        {renderTile || (premium === "CENTER" ? "★" : (premium || ""))}
 
         {isSelected && (
           <div
@@ -570,16 +581,23 @@ const ResultCard = React.memo(
           {/* Counter-Move / Opponent Deduction Metrics */}
           {play.oppBestReply && (
             <div
-              style={{
-                fontSize: "10px",
-                marginTop: "2px",
-                color: "#b71c1c",
-                fontWeight: "bold",
+              className="opponent-reply-block"
+              onMouseEnter={(e) => {
+                e.stopPropagation();
+                onHover([play, play.oppBestReply]);
               }}
+              onMouseLeave={(e) => {
+                e.stopPropagation();
+                onHover(play);
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick(play, false);
+                onClick(play.oppBestReply, true);
+              }}
+              title="Click to apply Opponent's counter-play to the board"
             >
-              Opp. Reply: {play.oppBestReply.word} ({play.oppBestReply.score}{" "}
-              PTS) &bull; Net:{" "}
-              {play.netSpread > 0 ? `+${play.netSpread}` : play.netSpread}
+              Opp. Reply: {play.oppBestReply.word} ({play.oppBestReply.score} PTS) &bull; Net: {play.netSpread > 0 ? `+${play.netSpread}` : play.netSpread}
             </div>
           )}
         </div>
@@ -619,14 +637,27 @@ ResultCard.displayName = "ResultCard";
 
 function FloatingDefinitionTooltip({
   hoveredPlay,
-  twlSet,
-  sowpodsSet,
-  localDictionary,
+  lookupWord,
 }) {
   const tooltipRef = useRef(null);
+  const [definition, setDefinition] = useState(null);
 
   useEffect(() => {
-    if (!hoveredPlay || hoveredPlay.dir === "EXCH") return;
+    if (!hoveredPlay) {
+       setDefinition(null);
+       return;
+    }
+    const play = Array.isArray(hoveredPlay) ? hoveredPlay[0] : hoveredPlay;
+    if (!play || play.dir === "EXCH") return;
+    
+    const fetchDef = async () => {
+      const w = play.word.toLowerCase();
+      if (lookupWord) {
+        const def = await lookupWord(w);
+        setDefinition(def);
+      }
+    };
+    if (!play || play.dir === "EXCH") return;
 
     const handleMouseMove = (e) => {
       if (!tooltipRef.current) return;
@@ -642,11 +673,13 @@ function FloatingDefinitionTooltip({
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [hoveredPlay]);
 
-  if (!hoveredPlay || hoveredPlay.dir === "EXCH") return null;
+  if (!hoveredPlay) return null;
+  const play = Array.isArray(hoveredPlay) ? hoveredPlay[0] : hoveredPlay;
+  if (!play || play.dir === "EXCH") return null;
 
-  const w = hoveredPlay.word.toLowerCase();
-  const inTwl = twlSet ? twlSet.has(w) : false;
-  const inSowpods = sowpodsSet ? sowpodsSet.has(w) : false;
+  const w = play.word.toLowerCase();
+  const inTwl = play.inTwl;
+  const inSowpods = play.inSowpods;
 
   return (
     <div
@@ -668,8 +701,8 @@ function FloatingDefinitionTooltip({
         className="win98-titlebar"
         style={{ padding: "2px 4px", fontSize: "11px" }}
       >
-        <span>{hoveredPlay.word.toUpperCase()}</span>
-        <span>{hoveredPlay.score} PTS</span>
+        <span>{play.word.toUpperCase()}</span>
+        <span>{play.score} PTS</span>
       </div>
       <div
         className="win98-inset"
@@ -703,7 +736,7 @@ function FloatingDefinitionTooltip({
             <span className="badge-illegal">✖ NOT SOWPODS</span>
           )}
         </div>
-        {localDictionary[w] || (
+        {definition || (
           <span style={{ color: "#777", fontStyle: "italic" }}>
             Valid tournament play (inflected form or no extended definition
             entry).
@@ -726,19 +759,13 @@ export default function ScrabbleSolverV3() {
   const [intelMode, setIntelMode] = useState("auto");
   const [manualAvailableTiles, setManualAvailableTiles] = useState("");
 
-  const [twlSet, setTwlSet] = useState(null);
-  const [sowpodsSet, setSowpodsSet] = useState(null);
-  const [localDictionary, setLocalDictionary] = useState({});
-
   const [loading, setLoading] = useState(true);
-  const [isSolving, setIsSolving] = useState(false);
+
+
   const [rack, setRack] = useState("REOPMAJ?");
-  const [candidatePlays, setCandidatePlays] = useState([]);
   const [hoveredPlay, setHoveredPlay] = useState(null);
   const [isBoardLocked, setIsBoardLocked] = useState(true);
   const [typingDir, setTypingDir] = useState("H");
-
-  const [history, setHistory] = useState([]);
 
   const [board, setBoard] = useState(() =>
     Array(15)
@@ -752,85 +779,33 @@ export default function ScrabbleSolverV3() {
   const deferredBoard = useDeferredValue(board);
   const deferredRack = useDeferredValue(rack);
 
-  const workerRef = useRef(null);
+  const {
+    past,
+    setPast,
+    future,
+    setFuture,
+    pushHistory,
+    handleUndo,
+    handleRedo,
+  } = useScrabbleHistory(board, setBoard, rack, setRack, setHoveredPlay);
+
+  const { candidatePlays, isSolving, checkWord, wordCheckResult } = useSolverWorker(
+    deferredRack,
+    deferredBoard,
+    activePreset,
+    useTwl,
+    useSowpods,
+    sortMode,
+    enableIntel,
+    intelMode,
+    manualAvailableTiles
+  );
+
+  const { isReady: dictReady, lookupWord } = useDictionaryWorker();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      workerRef.current = new Worker("/solverWorker.js");
-      workerRef.current.onmessage = (e) => {
-        setCandidatePlays(e.data || []);
-        setIsSolving(false);
-      };
-    }
-    return () => {
-      workerRef.current?.terminate();
-    };
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-    const fetchList = async (paths, fallbackUrl) => {
-      for (const p of paths) {
-        try {
-          const res = await fetch(p);
-          if (res.ok) {
-            const text = await res.text();
-            return text
-              .split("\n")
-              .map((w) => w.trim().toLowerCase())
-              .filter((w) => w.length >= 2 && /^[a-z]+$/.test(w));
-          }
-        } catch {}
-      }
-      if (fallbackUrl) {
-        try {
-          const res = await fetch(fallbackUrl);
-          if (res.ok) {
-            const text = await res.text();
-            return text
-              .split("\n")
-              .map((w) => w.trim().toLowerCase())
-              .filter((w) => w.length >= 2 && /^[a-z]+$/.test(w));
-          }
-        } catch {
-          return [];
-        }
-      }
-      return [];
-    };
-
-    const loadAll = async () => {
-      try {
-        const [sow, twl, dictRes] = await Promise.all([
-          fetchList(
-            ["/sowpods.txt", "/scrabble_words.txt"],
-            "https://raw.githubusercontent.com/raun/Scrabble/master/words.txt",
-          ),
-          fetchList(
-            ["/twl06.txt", "/naspa2023.txt"],
-            "https://raw.githubusercontent.com/jesstess/Scrabble/master/scrabble/twl06.txt",
-          ),
-          fetch("/dictionary_compact.json")
-            .then((res) => (res.ok ? res.json() : {}))
-            .catch(() => ({})),
-        ]);
-
-        if (isMounted) {
-          setSowpodsSet(new Set(sow));
-          setTwlSet(new Set(twl));
-          setLocalDictionary(dictRes);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    loadAll();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    if (dictReady) setLoading(false);
+  }, [dictReady]);
 
   const handlePresetChange = (key) => {
     setActivePresetKey(key);
@@ -844,50 +819,75 @@ export default function ScrabbleSolverV3() {
     }
   };
 
+  // Persistence: Load
   useEffect(() => {
-    if (!deferredRack.trim()) {
-      setCandidatePlays([]);
-      setIsSolving(false);
-      return;
+    try {
+      const saved = localStorage.getItem("scpro_saved_game");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.board) setBoard(parsed.board);
+        if (parsed.rack) setRack(parsed.rack);
+        if (parsed.past) setPast(parsed.past);
+        if (parsed.future) setFuture(parsed.future);
+      }
+    } catch (e) {
+      console.error("Failed to load state", e);
     }
-
-    setIsSolving(true);
-    workerRef.current?.postMessage({
-      rack: deferredRack,
-      board: deferredBoard,
-      activePreset,
-      useTwl,
-      useSowpods,
-      sortMode,
-      enableIntel,
-      manualAvailableTiles: intelMode === "manual" ? manualAvailableTiles : "",
-    });
-  }, [
-    deferredBoard,
-    deferredRack,
-    activePreset,
-    useTwl,
-    useSowpods,
-    sortMode,
-    enableIntel,
-    intelMode,
-    manualAvailableTiles,
-  ]);
-
-  const handleUndo = useCallback(() => {
-    setHistory((prevHistory) => {
-      if (prevHistory.length === 0) return prevHistory;
-      const lastState = prevHistory[prevHistory.length - 1];
-      setBoard(lastState.board);
-      setRack(lastState.rack);
-      setHoveredPlay(null);
-      return prevHistory.slice(0, -1);
-    });
   }, []);
 
-  const pushHistory = useCallback(() => {
-    setHistory((prev) => [...prev.slice(-49), { board, rack }]);
-  }, [board, rack]);
+  // Persistence: Save
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          "scpro_saved_game",
+          JSON.stringify({ board, rack, past, future })
+        );
+      } catch (e) {}
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [board, rack, past, future]);
+
+  const exportGame = () => {
+    const data = JSON.stringify({ board, rack, past, future, activePresetKey, intelMode, manualAvailableTiles });
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `scpro_game_${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importGame = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target.result);
+        if (parsed.board) setBoard(parsed.board);
+        if (parsed.rack) setRack(parsed.rack);
+        if (parsed.past) setPast(parsed.past);
+        if (parsed.future) setFuture(parsed.future);
+        if (parsed.activePresetKey) setActivePresetKey(parsed.activePresetKey);
+        if (parsed.intelMode) setIntelMode(parsed.intelMode);
+        if (parsed.manualAvailableTiles) setManualAvailableTiles(parsed.manualAvailableTiles);
+      } catch (err) {
+        alert("Failed to parse game file.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = null; // reset
+  };
+
+  const boardRef = useRef(board);
+  const selectedCellRef = useRef(selectedCell);
+  
+  useEffect(() => {
+    boardRef.current = board;
+    selectedCellRef.current = selectedCell;
+  }, [board, selectedCell]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -905,8 +905,9 @@ export default function ScrabbleSolverV3() {
       if (isBoardLocked) return;
       if (document.activeElement && document.activeElement.tagName === "INPUT")
         return;
-      if (!selectedCell) return;
-      const [r, c] = selectedCell;
+      const currentCell = selectedCellRef.current;
+      if (!currentCell) return;
+      const [r, c] = currentCell;
 
       if (e.key === " ") {
         e.preventDefault();
@@ -914,18 +915,21 @@ export default function ScrabbleSolverV3() {
         return;
       }
 
+      const currentBoard = boardRef.current;
+
       if (/^[a-zA-Z]$/.test(e.key)) {
         pushHistory();
         setBoard((prev) => {
           const next = prev.map((row) => [...row]);
-          next[r][c] = e.key.toUpperCase();
+          const char = e.shiftKey ? e.key.toLowerCase() : e.key.toUpperCase();
+          next[r][c] = char;
           return next;
         });
 
         if (typingDir === "H" && c < 14) setSelectedCell([r, c + 1]);
         else if (typingDir === "V" && r < 14) setSelectedCell([r + 1, c]);
       } else if (e.key === "Backspace") {
-        if (board[r][c]) {
+        if (currentBoard[r][c]) {
           pushHistory();
           setBoard((prev) => {
             const next = prev.map((row) => [...row]);
@@ -975,7 +979,7 @@ export default function ScrabbleSolverV3() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedCell, isBoardLocked, typingDir, board, handleUndo, pushHistory]);
+  }, [isBoardLocked, typingDir, handleUndo, pushHistory]);
 
   const clearBoard = useCallback(() => {
     pushHistory();
@@ -988,19 +992,23 @@ export default function ScrabbleSolverV3() {
   }, [pushHistory]);
 
   const previewMap = useMemo(() => {
-    if (!hoveredPlay || hoveredPlay.dir === "EXCH") return {};
+    if (!hoveredPlay) return {};
+    const plays = Array.isArray(hoveredPlay) ? hoveredPlay : [hoveredPlay];
     const map = {};
-    const { word, row, col, dir } = hoveredPlay;
-    for (let i = 0; i < word.length; i++) {
-      const r = dir === "V" ? row + i : row;
-      const c = dir === "H" ? col + i : col;
-      map[`${r},${c}`] = word[i].toUpperCase();
+    for (const p of plays) {
+      if (!p || p.dir === "EXCH") continue;
+      const { word, row, col, dir } = p;
+      for (let i = 0; i < word.length; i++) {
+        const r = dir === "V" ? row + i : row;
+        const c = dir === "H" ? col + i : col;
+        map[`${r},${c}`] = word[i];
+      }
     }
     return map;
   }, [hoveredPlay]);
 
   const applyPlay = useCallback(
-    (play) => {
+    (play, isOpponent = false) => {
       pushHistory();
       if (play.dir !== "EXCH") {
         setBoard((prev) => {
@@ -1008,33 +1016,43 @@ export default function ScrabbleSolverV3() {
           for (let i = 0; i < play.word.length; i++) {
             const r = play.dir === "V" ? play.row + i : play.row;
             const c = play.dir === "H" ? play.col + i : play.col;
-            next[r][c] = play.word[i].toUpperCase();
+            next[r][c] = play.word[i];
           }
           return next;
         });
       }
 
-      setRack((prevRack) => {
-        let currentRack = prevRack.toUpperCase().split("");
-        for (let i = 0; i < play.word.length; i++) {
-          if (play.dir !== "EXCH") {
-            const r = play.dir === "V" ? play.row + i : play.row;
-            const c = play.dir === "H" ? play.col + i : play.col;
-            if (board[r][c]) continue;
+      if (!isOpponent) {
+        setRack((prevRack) => {
+          let currentRack = prevRack.toUpperCase().split("");
+          for (let i = 0; i < play.word.length; i++) {
+            if (play.dir !== "EXCH") {
+              const r = play.dir === "V" ? play.row + i : play.row;
+              const c = play.dir === "H" ? play.col + i : play.col;
+              if (board[r][c]) continue;
+            }
+            const isBlank = play.word[i] >= 'a' && play.word[i] <= 'z';
+            const char = play.word[i].toUpperCase();
+            if (isBlank) {
+              const wildcardIdx = currentRack.findIndex((ch) =>
+                ["?", ".", "0", "*", "_"].includes(ch),
+              );
+              if (wildcardIdx !== -1) currentRack.splice(wildcardIdx, 1);
+            } else {
+              const idx = currentRack.indexOf(char);
+              if (idx !== -1) {
+                currentRack.splice(idx, 1);
+              } else {
+                const wildcardIdx = currentRack.findIndex((ch) =>
+                  ["?", ".", "0", "*", "_"].includes(ch),
+                );
+                if (wildcardIdx !== -1) currentRack.splice(wildcardIdx, 1);
+              }
+            }
           }
-          const char = play.word[i].toUpperCase();
-          const idx = currentRack.indexOf(char);
-          if (idx !== -1) {
-            currentRack.splice(idx, 1);
-          } else {
-            const wildcardIdx = currentRack.findIndex((ch) =>
-              ["?", ".", "0", "*", "_"].includes(ch),
-            );
-            if (wildcardIdx !== -1) currentRack.splice(wildcardIdx, 1);
-          }
-        }
-        return currentRack.join("");
-      });
+          return currentRack.join("");
+        });
+      }
 
       setHoveredPlay(null);
     },
@@ -1223,28 +1241,51 @@ export default function ScrabbleSolverV3() {
                   onClick={() =>
                     setTypingDir((prev) => (prev === "H" ? "V" : "H"))
                   }
+                  title="Tip: Hold Shift while typing to place a blank tile (0 points)"
                 >
                   Typing:{" "}
                   {typingDir === "H"
-                    ? "Across ➔ (Space to flip)"
-                    : "Down ⬇ (Space to flip)"}
+                    ? "Across ➔"
+                    : "Down ⬇"}{" "}
+                  (Shift=Blank)
                 </button>
                 <button
                   className="win98-button"
                   style={{
                     fontWeight: "bold",
-                    opacity: history.length === 0 ? 0.5 : 1,
-                    cursor: history.length === 0 ? "not-allowed" : "pointer",
+                    opacity: past.length === 0 ? 0.5 : 1,
+                    cursor: past.length === 0 ? "not-allowed" : "pointer",
                   }}
                   onClick={handleUndo}
-                  disabled={history.length === 0}
+                  disabled={past.length === 0}
                   title="Undo last play or change (Ctrl+Z)"
                 >
                   ↶ Undo
                 </button>
+                <button
+                  className="win98-button"
+                  style={{
+                    fontWeight: "bold",
+                    opacity: future.length === 0 ? 0.5 : 1,
+                    cursor: future.length === 0 ? "not-allowed" : "pointer",
+                  }}
+                  onClick={handleRedo}
+                  disabled={future.length === 0}
+                  title="Redo undone play or change (Ctrl+Y)"
+                >
+                  Redo ↷
+                </button>
                 <button className="win98-button" onClick={clearBoard}>
                   Clear Board
                 </button>
+                <div style={{ width: "1px", backgroundColor: "var(--w98-border-dark)", margin: "0 4px" }} />
+                <button className="win98-button" onClick={exportGame} title="Export game state">
+                  💾 Export
+                </button>
+                <label className="win98-button" style={{ display: "inline-block", cursor: "pointer", textAlign: "center" }} title="Import game state">
+                  📂 Import
+                  <input type="file" accept=".json" onChange={importGame} style={{ display: "none" }} />
+                </label>
               </div>
             </div>
 
@@ -1298,10 +1339,10 @@ export default function ScrabbleSolverV3() {
                 </div>
 
                 <RefereeChecker
-                  twlSet={twlSet}
-                  sowpodsSet={sowpodsSet}
                   activePreset={activePreset}
-                  localDictionary={localDictionary}
+                  lookupWord={lookupWord}
+                  checkWord={checkWord}
+                  wordCheckResult={wordCheckResult}
                 />
               </div>
 
@@ -1313,7 +1354,7 @@ export default function ScrabbleSolverV3() {
                 }}
               >
                 {/* Physical Wooden Rack Tray & Input */}
-                <div className="win98-inset">
+                <div className="rack-container">
                   <label
                     style={{
                       fontSize: "11px",
@@ -1327,6 +1368,7 @@ export default function ScrabbleSolverV3() {
                   <input
                     type="text"
                     className="win98-input"
+                    style={{ fontSize: "14px", padding: "4px 6px" }}
                     value={rack}
                     onChange={(e) => handleRackChange(e.target.value)}
                     placeholder="E.g. REOPMAJ? or ? for blank"
@@ -1373,28 +1415,9 @@ export default function ScrabbleSolverV3() {
                 </div>
 
                 {/* Opponent Intel & Prediction Module */}
-                <div
-                  className="win98-inset"
-                  style={{ backgroundColor: "#f0f4f8" }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    <label
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: "bold",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        cursor: "pointer",
-                      }}
-                    >
+                <div className="options-panel">
+                  <div className="options-panel-title">
+                    <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" }}>
                       <input
                         type="checkbox"
                         checked={enableIntel}
@@ -1405,28 +1428,9 @@ export default function ScrabbleSolverV3() {
                   </div>
 
                   {enableIntel && (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "6px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "10px",
-                          fontSize: "10px",
-                        }}
-                      >
-                        <label
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "3px",
-                            cursor: "pointer",
-                          }}
-                        >
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px" }}>
+                      <div style={{ display: "flex", gap: "10px", fontSize: "11px" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" }}>
                           <input
                             type="radio"
                             name="intelMode"
@@ -1436,14 +1440,7 @@ export default function ScrabbleSolverV3() {
                           />
                           Auto (Endgame Deduce)
                         </label>
-                        <label
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "3px",
-                            cursor: "pointer",
-                          }}
-                        >
+                        <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" }}>
                           <input
                             type="radio"
                             name="intelMode"
@@ -1460,14 +1457,12 @@ export default function ScrabbleSolverV3() {
                           <input
                             type="text"
                             className="win98-input"
-                            style={{ fontSize: "11px", padding: "2px 4px" }}
+                            style={{ fontSize: "11px", padding: "4px" }}
                             placeholder="Paste 'Available Tiles' from Woogles (e.g. AABCDEE...)"
                             value={manualAvailableTiles}
                             onChange={(e) =>
                               setManualAvailableTiles(
-                                e.target.value
-                                  .toUpperCase()
-                                  .replace(/[^A-Z?]/g, ""),
+                                e.target.value.toUpperCase().replace(/[^A-Z?]/g, ""),
                               )
                             }
                           />
@@ -1530,11 +1525,8 @@ export default function ScrabbleSolverV3() {
                           : play.dir === "H"
                             ? `${rowNum}${colLetter}`
                             : `${colLetter}${rowNum}`;
-                        const w = play.word.toLowerCase();
-                        const inTwl = twlSet ? twlSet.has(w) : false;
-                        const inSowpods = sowpodsSet
-                          ? sowpodsSet.has(w)
-                          : false;
+                        const inTwl = play.inTwl;
+                        const inSowpods = play.inSowpods;
 
                         return (
                           <ResultCard
@@ -1562,11 +1554,10 @@ export default function ScrabbleSolverV3() {
 
         <FloatingDefinitionTooltip
           hoveredPlay={hoveredPlay}
-          twlSet={twlSet}
-          sowpodsSet={sowpodsSet}
-          localDictionary={localDictionary}
+          lookupWord={lookupWord}
         />
       </div>
     </div>
   );
 }
+
