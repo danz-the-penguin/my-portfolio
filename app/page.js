@@ -67,15 +67,29 @@ const PROJECTS = [
     title: "Scrabble Checker Pro (BETA)",
     description:
       "A full-featured interactive Scrabble engine styled in a retro Windows 98 interface. Features dynamic keyboard navigation over a 15x15 board grid with premium tile multipliers (2L, 3L, 2W, 3W, Center), live previewing on hover, auto-updating rack states, and real-time strategic play ranking that evaluates total score alongside board exposure risk (e.g., exposing Triple Word scores). Optimised with useDeferredValue and O(1) set lookups to deliver non-blocking validation against external lexicons.",
-    tags: ["html", "css"],
+    tags: ["html", "css", "React", "Next.js", "json"],
     link: "https://penguins-portfolio.vercel.app/scpro_beta",
   },
   {
     title: "Scrabble Checker Pro",
     description:
       "A full-featured interactive Scrabble engine styled in a retro Windows 98 interface. Features dynamic keyboard navigation over a 15x15 board grid with premium tile multipliers (2L, 3L, 2W, 3W, Center), live previewing on hover, auto-updating rack states, and real-time strategic play ranking that evaluates total score alongside board exposure risk (e.g., exposing Triple Word scores). Optimised with useDeferredValue and O(1) set lookups to deliver non-blocking validation against external lexicons.",
-    tags: ["html", "css"],
+    tags: ["html", "css", "React", "Next.js", "json"],
     link: "https://penguins-portfolio.vercel.app/scpro",
+  },
+  {
+    title: "Scrabble Checker Pro V3",
+    description:
+      "A full-featured interactive Scrabble engine styled in a retro Windows 98 interface. Features dynamic keyboard navigation over a 15x15 board grid with premium tile multipliers (2L, 3L, 2W, 3W, Center), live previewing on hover, auto-updating rack states, and real-time strategic play ranking that evaluates total score alongside board exposure risk (e.g., exposing Triple Word scores). Optimised with useDeferredValue and O(1) set lookups to deliver non-blocking validation against external lexicons.",
+    tags: ["html", "css", "React", "Next.js", "json"],
+    link: "https://penguins-portfolio.vercel.app/scprov3",
+  },
+  {
+    title: "Scrabble Checker Pro V3 (BETA)",
+    description:
+      "A full-featured interactive Scrabble engine styled in a retro Windows 98 interface. Features dynamic keyboard navigation over a 15x15 board grid with premium tile multipliers (2L, 3L, 2W, 3W, Center), live previewing on hover, auto-updating rack states, and real-time strategic play ranking that evaluates total score alongside board exposure risk (e.g., exposing Triple Word scores). Optimised with useDeferredValue and O(1) set lookups to deliver non-blocking validation against external lexicons.",
+    tags: ["html", "css", "React", "Next.js", "json"],
+    link: "https://penguins-portfolio.vercel.app/scprov3_beta",
   },
 ];
 
