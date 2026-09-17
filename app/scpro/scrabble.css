@@ -32,6 +32,28 @@
   --cell-3W-text: #ffffff;
 }
 
+/* HOYLE CLASSIC WOOD THEME OVERRIDES */
+/* When this class is applied to the root container, it overrides the default Win98 variables */
+.theme-hoyle {
+  --w98-desktop: #2E1B15; /* Deep Walnut */
+  --w98-surface: #D8D0C5; /* Warm Aged Parchment */
+  --w98-surface-inset: #F4EFEB; /* Brighter Paper */
+  --w98-title-start: #5D4037; /* Dark Leather Brown */
+  --w98-title-end: #8D6E63; /* Lighter Leather */
+  --w98-highlight: #4E342E; /* Rich Wood */
+  --board-bg: #4E342E;
+  --board-container: #8D6E63;
+  --cell-normal: #EFEBE9;
+  --cell-2L-bg: #BCAAA4;
+  --cell-2L-text: #3E2723;
+  --cell-3L-bg: #3E2723;
+  --cell-3L-text: #EFEBE9;
+  --cell-2W-bg: #E6A292;
+  --cell-2W-text: #4E342E;
+  --cell-3W-bg: #8E3B36;
+  --cell-3W-text: #ffffff;
+}
+
 @font-face {
   font-family: "PixelSans";
   src: local("MS Sans Serif"), local("Tahoma"), local("Arial");
@@ -45,7 +67,8 @@
   background-color: var(--w98-desktop);
   min-height: 100vh;
   padding: 15px;
-  font-family: "PixelSans", "MS Sans Serif", Tahoma, sans-serif;
+  /* Use Tahoma/Verdana for crisp, readable UI text without anti-aliasing blur */
+  font-family: Tahoma, Verdana, Arial, sans-serif;
   color: var(--w98-text);
 }
 
@@ -55,6 +78,7 @@
 }
 
 .win98-window {
+  box-sizing: border-box;
   background-color: var(--w98-surface);
   border: 2px solid;
   border-color: var(--w98-border-light) var(--w98-border-dark)
@@ -73,7 +97,7 @@
   color: var(--w98-text-light);
   padding: 3px 6px;
   font-weight: bold;
-  font-size: 13px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -113,6 +137,8 @@
   overflow-x: auto;
   padding: 8px;
   background: var(--board-container);
+  /* Create a 3D sunken effect for the board tray */
+  box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.6), inset -1px -1px 2px rgba(255, 255, 255, 0.2);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -203,6 +229,9 @@
 .cell-tile {
   background-color: var(--cell-tile-bg);
   color: #000000;
+  /* Use a heavy, classic font for game pieces to simulate physical ink */
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 16px; /* Bump up font size for better readability */
   border-top: 2px solid #ffffff;
   border-left: 2px solid #ffffff;
   border-bottom: 2px solid #a09470;
@@ -238,6 +267,9 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  /* Use a heavy, classic font for game pieces to simulate physical ink */
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 16px; /* Bump up font size for better readability */
   width: 38px;
   height: 42px;
   background-color: var(--cell-tile-bg);
@@ -300,7 +332,10 @@
   padding: 4px;
   font-size: 13px;
   font-family: monospace;
+  /* Use the aged paper color instead of stark white for better theme cohesion */
   background-color: var(--w98-surface-inset);
+  color: var(--w98-text);
+  font-weight: bold;
   border: 2px solid;
   border-color: var(--w98-border-dark) var(--w98-border-light)
     var(--w98-border-light) var(--w98-border-dark);
@@ -335,7 +370,10 @@
 }
 
 .results-list {
-  max-height: 480px;
+  /* Removed fixed max-height to let the results list dynamically fill the entire right column */
+  flex: 1;
+  height: 100%;
+  min-height: 400px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -514,6 +552,7 @@
 /* Unseen Tiles Tracker */
 .unseen-pane {
   margin-top: 10px;
+  width: 100%;
   background-color: var(--w98-surface);
   border: 2px solid;
   border-color: var(--w98-border-dark) var(--w98-border-light) var(--w98-border-light) var(--w98-border-dark);
@@ -565,13 +604,19 @@
 
 /* Rack Container Tweaks */
 .rack-container {
+  box-sizing: border-box;
+  width: 100%;
   margin-bottom: 12px;
-  background-color: var(--w98-surface);
-  padding: 6px;
-  border: 2px groove var(--w98-border-light);
+  background-color: var(--board-container);
+  padding: 8px;
+  border: 2px solid;
+  border-color: var(--w98-border-darker) var(--w98-border-light) var(--w98-border-light) var(--w98-border-darker);
+  box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.6), inset -1px -1px 2px rgba(255, 255, 255, 0.2);
 }
 
 .options-panel {
+  box-sizing: border-box;
+  width: 100%;
   background-color: var(--w98-surface);
   border: 2px solid;
   border-color: var(--w98-border-light) var(--w98-border-dark) var(--w98-border-dark) var(--w98-border-light);
@@ -587,4 +632,144 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Opponent Tile Style */
+.cell-tile-opponent { 
+  background-color: #ffcccc !important; 
+  border-bottom: 2px solid #cc0000 !important; 
+  border-right: 2px solid #cc0000 !important; 
+  color: #660000 !important; 
+}
+
+/* Win98 Status Bar */
+.win98-statusbar {
+  display: flex; 
+  gap: 4px; 
+  padding: 2px 4px; 
+  background: var(--w98-surface); 
+  border-top: 1px solid var(--w98-border-mid); 
+  margin-top: 8px; 
+  font-size: 11px;
+}
+.win98-statusbar > div {
+  border: 1px solid; 
+  border-color: var(--w98-border-dark) var(--w98-border-light) var(--w98-border-light) var(--w98-border-dark); 
+  padding: 2px 6px;
+}
+
+.win98-btn-sys {
+  padding: 0 4px;
+  font-size: 10px;
+  height: 14px;
+}
+.win98-btn-sys:active {
+  padding: 1px 3px 0px 5px !important;
+}
+
+/* Windows 98 Menu Bar Styling */
+.win98-menubar { 
+  display: flex; 
+  gap: 12px; 
+  padding: 2px 8px; 
+  border-bottom: 1px solid var(--w98-border-dark); 
+  background-color: var(--w98-surface); 
+  font-size: 11px; 
+}
+.menu-item { cursor: default; }
+.menu-item:hover { background-color: var(--w98-title-start); color: #fff; }
+
+/* Etched vertical separator to divide toolbar groups logically */
+.toolbar-separator { width: 2px; border-left: 1px solid var(--w98-border-dark); border-right: 1px solid var(--w98-border-light); margin: 0 4px; height: 20px; }
+
+/* Classic Windows 98 Fieldset Groupings */
+.win98-fieldset {
+  border: 2px solid;
+  border-color: var(--w98-border-light) var(--w98-border-darker) var(--w98-border-darker) var(--w98-border-light);
+  padding: 8px;
+  margin-bottom: 8px;
+}
+.win98-fieldset legend {
+  padding: 0 4px;
+}
+
+/* Def Button Mobile */
+.def-btn-mobile {
+  display: none;
+  background: var(--w98-bg);
+  border: 1px solid var(--w98-border-light);
+  border-bottom-color: var(--w98-border-dark);
+  border-right-color: var(--w98-border-dark);
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0 4px;
+  height: 18px;
+  margin-left: 4px;
+}
+.def-btn-mobile:active {
+  border: 1px solid var(--w98-border-dark);
+  border-bottom-color: var(--w98-border-light);
+  border-right-color: var(--w98-border-light);
+}
+
+/* ========================================================= */
+/* Mobile & Touchscreen UX Overrides */
+/* ========================================================= */
+@media (max-width: 768px), (pointer: coarse) {
+  .def-btn-mobile {
+    display: inline-block;
+  }
+
+  /* Increase core interactive elements to meet 44px min-height standard for touch */
+  .win98-button,
+  .win98-input,
+  select.win98-input {
+    min-height: 44px;
+    font-size: 14px !important;
+  }
+  
+  /* Make the main layout stack vertically instead of flex row */
+  .v3-layout {
+    flex-direction: column;
+  }
+
+  /* Right sidebar should take full width on mobile */
+  .v3-sidebar-right {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-left: none;
+    border-top: 2px solid var(--w98-border-light);
+  }
+
+  /* Increase tile sizes for better tap targets and readability */
+  .scrabble-tile-rack {
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 24px !important;
+  }
+  
+  .scrabble-tile-mini {
+    width: 18px !important;
+    height: 18px !important;
+    font-size: 12px !important;
+  }
+
+  /* Allow the board to overflow horizontally with smooth scrolling */
+  /* Prevent the board from shrinking or breaking the flex layout */
+  .board-grid-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px; /* Room for scrollbar */
+  }
+  
+  .board-grid {
+    min-width: 500px; /* Force the board to stay large enough to tap */
+  }
+
+  /* Ensure the tooltip can be dismissed by clicking anywhere */
+  .win98-tooltip {
+    pointer-events: auto !important; /* Allow touch on the tooltip to dismiss or scroll */
+  }
 }

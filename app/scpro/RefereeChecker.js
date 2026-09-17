@@ -7,28 +7,19 @@ export default function RefereeChecker({
   wordCheckResult,
   activePreset,
   lookupWord,
+  activeLexicon,
 }) {
   const [challengeInput, setChallengeInput] = useState("");
-  const [lexiconMode, setLexiconMode] = useState("both");
   const [challengeResult, setChallengeResult] = useState(null);
 
   useEffect(() => {
     if (!wordCheckResult) return;
     
-    const { word, inTwl, inSowpods } = wordCheckResult;
+    const { word, isValid } = wordCheckResult;
     const raw = challengeInput.trim().toLowerCase();
     const w = raw.replace(/[^a-z]/g, "");
     
     if (word !== w) return;
-    
-    let isAccepted = false;
-    if (lexiconMode === "twl") {
-      isAccepted = inTwl;
-    } else if (lexiconMode === "sowpods") {
-      isAccepted = inSowpods;
-    } else {
-      isAccepted = inTwl || inSowpods;
-    }
 
     const baseScore = w
       .split("")
@@ -41,16 +32,14 @@ export default function RefereeChecker({
       setChallengeResult({
         word: w,
         isLoaded: true,
-        inTwl,
-        inSowpods,
+        isValid,
         inJson,
-        isAccepted,
         def,
         baseScore,
       });
     };
     checkAsync();
-  }, [wordCheckResult, challengeInput, lexiconMode, lookupWord, activePreset]);
+  }, [wordCheckResult, challengeInput, lookupWord, activePreset, activeLexicon]);
 
   useEffect(() => {
     const raw = challengeInput.trim().toLowerCase();
@@ -72,75 +61,9 @@ export default function RefereeChecker({
   return (
     <div className="win98-window" style={{ marginTop: "12px" }}>
       <div className="win98-titlebar">
-        <span>Referee &bull; Multi-Lexicon Challenge & Verification</span>
+        <span>Referee &bull; Verification</span>
       </div>
       <div className="win98-content" style={{ padding: "8px" }}>
-        <div
-          className="win98-inset"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            padding: "4px 8px",
-            marginBottom: "8px",
-            fontSize: "11px",
-            backgroundColor: "#e0e0e0",
-            flexWrap: "wrap",
-          }}
-        >
-          <span style={{ fontWeight: "bold" }}>Verify Mode:</span>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "3px",
-              cursor: "pointer",
-            }}
-          >
-            <input
-              type="radio"
-              name="refereeLexiconMode"
-              value="both"
-              checked={lexiconMode === "both"}
-              onChange={() => setLexiconMode("both")}
-            />
-            Both / Either
-          </label>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "3px",
-              cursor: "pointer",
-            }}
-          >
-            <input
-              type="radio"
-              name="refereeLexiconMode"
-              value="twl"
-              checked={lexiconMode === "twl"}
-              onChange={() => setLexiconMode("twl")}
-            />
-            TWL (Plato / US)
-          </label>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "3px",
-              cursor: "pointer",
-            }}
-          >
-            <input
-              type="radio"
-              name="refereeLexiconMode"
-              value="sowpods"
-              checked={lexiconMode === "sowpods"}
-              onChange={() => setLexiconMode("sowpods")}
-            />
-            SOWPODS (CSW / INTL)
-          </label>
-        </div>
 
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <input
@@ -169,12 +92,12 @@ export default function RefereeChecker({
               padding: "6px 8px",
               backgroundColor: !challengeResult.isLoaded
                 ? "#fffde7"
-                : challengeResult.isAccepted
+                : challengeResult.isValid
                   ? "#e8f5e9"
                   : "#ffebee",
               borderColor: !challengeResult.isLoaded
                 ? "#fbc02d"
-                : challengeResult.isAccepted
+                : challengeResult.isValid
                   ? "#2e7d32"
                   : "#c62828",
             }}
@@ -199,53 +122,21 @@ export default function RefereeChecker({
               >
                 {!challengeResult.isLoaded ? (
                   <span className="badge-dict-only">
-                    ⏳ LOADING LEXICONS...
+                    ⏳ CHECKING {activeLexicon.toUpperCase()}...
                   </span>
                 ) : (
                   <>
                     <span
                       className={
-                        challengeResult.isAccepted
+                        challengeResult.isValid
                           ? "badge-legal"
                           : "badge-illegal"
                       }
                     >
-                      {challengeResult.isAccepted
-                        ? `✔ VALID (${lexiconMode.toUpperCase()})`
-                        : `✖ INVALID (${lexiconMode.toUpperCase()})`}
+                      {challengeResult.isValid
+                        ? `✔ VALID (${activeLexicon.toUpperCase()})`
+                        : `✖ INVALID (${activeLexicon.toUpperCase()})`}
                     </span>
-
-                    {challengeResult.inTwl ? (
-                      <span
-                        className="badge-legal"
-                        style={{ fontSize: "8px", padding: "1px 3px" }}
-                      >
-                        TWL
-                      </span>
-                    ) : (
-                      <span
-                        className="badge-illegal"
-                        style={{ fontSize: "8px", padding: "1px 3px" }}
-                      >
-                        NO-TWL
-                      </span>
-                    )}
-
-                    {challengeResult.inSowpods ? (
-                      <span
-                        className="badge-legal"
-                        style={{ fontSize: "8px", padding: "1px 3px" }}
-                      >
-                        CSW
-                      </span>
-                    ) : (
-                      <span
-                        className="badge-illegal"
-                        style={{ fontSize: "8px", padding: "1px 3px" }}
-                      >
-                        NO-CSW
-                      </span>
-                    )}
 
                     {challengeResult.inJson && (
                       <span
@@ -259,7 +150,7 @@ export default function RefereeChecker({
                 )}
               </div>
 
-              {challengeResult.isLoaded && challengeResult.isAccepted && (
+              {challengeResult.isLoaded && challengeResult.isValid && (
                 <span
                   style={{
                     fontSize: "11px",
@@ -274,18 +165,17 @@ export default function RefereeChecker({
 
             <div style={{ fontSize: "11px", lineHeight: "1.4", color: "#222" }}>
               {!challengeResult.isLoaded ? (
-                <span style={{ color: "#777" }}>Loading wordlists...</span>
+                <span style={{ color: "#777" }}>Verifying word...</span>
               ) : challengeResult.def ? (
                 challengeResult.def
-              ) : challengeResult.isAccepted ? (
+              ) : challengeResult.isValid ? (
                 <span style={{ color: "#555", fontStyle: "italic" }}>
-                  Verified legal word (inflected form or no extended dictionary
-                  entry).
+                  Verified legal word.
                 </span>
               ) : (
                 <span style={{ color: "#b71c1c" }}>
                   &quot;{challengeResult.word.toUpperCase()}&quot; is not legal
-                  under {lexiconMode.toUpperCase()} rules. Challenge succeeds!
+                  under {activeLexicon.toUpperCase()} rules. Challenge succeeds!
                 </span>
               )}
             </div>

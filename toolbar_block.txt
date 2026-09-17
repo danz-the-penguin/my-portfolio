@@ -1,0 +1,321 @@
+          <div className="win98-menubar"><span className="menu-item"><u>F</u>ile</span><span className="menu-item"><u>E</u>dit</span><span className="menu-item"><u>V</u>iew</span><span className="menu-item"><u>H</u>elp</span></div>
+
+          <div className="win98-content">
+            {/* Toolbar Controls */}
+            <div
+              style={{
+                marginBottom: "10px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "10px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  <label style={{ fontSize: "11px", fontWeight: "bold" }}>
+                    Preset:
+                  </label>
+                  <select
+                    className="win98-input"
+                    style={{
+                      width: "auto",
+                      cursor: "pointer",
+                      padding: "2px 6px",
+                    }}
+                    value={activePresetKey}
+                    onChange={(e) => handlePresetChange(e.target.value)}
+                  >
+                    {Object.entries(BOARD_PRESETS).map(([key, cfg]) => (
+                      <option key={key} value={key}>
+                        {cfg.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="toolbar-separator" />
+                {/* Scoreboard securely relocated to the main toolbar to maximize vertical board space */}
+                <div
+                  className="win98-inset"
+                  style={{
+                    display: "flex",
+                    
+                    
+                    padding: "2px 8px",
+                    backgroundColor: "var(--w98-bg)",
+                  }}
+                >
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontWeight: "bold",
+                      backgroundColor:
+                        inputMode === "me"
+                          ? "var(--w98-title-start)"
+                          : "transparent",
+                      color: inputMode === "me" ? "#fff" : "inherit",
+                      padding: "2px 6px",
+                    }}
+                  >
+                    My Score:
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="win98-input"
+                      style={{ width: "60px", textAlign: "right" }}
+                      value={myScore}
+                      onChange={(e) =>
+                        setMyScore(e.target.value.replace(/[^0-9]/g, ""))
+                      }
+                    />
+                  </label>
+                  <button
+                    className="win98-button"
+                    onClick={() =>
+                      setInputMode((m) => (m === "me" ? "opp" : "me"))
+                    }
+                    style={{
+                      fontWeight: "bold",
+                      color: inputMode === "opp" ? "#cc0000" : "inherit",
+                    }}
+                  >
+                    {inputMode === "me"
+                      ? "My Play 👤 (Alt+O)"
+                      : "Opponent Play 👿 (Alt+O)"}
+                  </button>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontWeight: "bold",
+                      backgroundColor:
+                        inputMode === "opp" ? "#cc0000" : "transparent",
+                      color: inputMode === "opp" ? "#fff" : "#cc0000",
+                      padding: "2px 6px",
+                    }}
+                  >
+                    Opponent Score:
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="win98-input"
+                      style={{ width: "60px", textAlign: "right" }}
+                      value={oppScore}
+                      onChange={(e) =>
+                        setOppScore(e.target.value.replace(/[^0-9]/g, ""))
+                      }
+                    />
+                  </label>
+                </div>
+                <div className="toolbar-separator" />
+
+                {/* Dictionary Checkboxes */}
+                <div
+                  className="win98-inset"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "4px 8px",
+                    fontSize: "11px",
+                    backgroundColor: "#e0e0e0",
+                  }}
+                >
+                  <span style={{ fontWeight: "bold" }}>Solver Dicts:</span>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={useTwl}
+                      onChange={(e) => {
+                        setUseTwl(e.target.checked);
+                        if (!e.target.checked && !useSowpods)
+                          setUseSowpods(true);
+                      }}
+                    />{" "}
+                    TWL
+                  </label>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={useSowpods}
+                      onChange={(e) => {
+                        setUseSowpods(e.target.checked);
+                        if (!e.target.checked && !useTwl) setUseTwl(true);
+                      }}
+                    />{" "}
+                    SOWPODS
+                  </label>
+                </div>
+                
+                <div className="toolbar-separator" />
+
+                {/* Ranking Toggle Dropdown */}
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  <label
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: "bold",
+                      color: "#b71c1c",
+                    }}
+                  >
+                    Sort By:
+                  </label>
+                  <select
+                    className="win98-input"
+                    style={{
+                      width: "auto",
+                      cursor: "pointer",
+                      padding: "2px 6px",
+                    }}
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value)}
+                  >
+                    <option value="value">
+                      Strategic Value (Score + Leave + Defense)
+                    </option>
+                    <option value="score">Highest Score (Greedy)</option>
+                  </select>
+                </div>
+                
+                <div className="toolbar-separator" />
+              </div>
+
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  className="win98-button"
+                  style={{
+                    fontWeight: "bold",
+                    backgroundColor: isBoardLocked ? "#c0c0c0" : "#ffcccc",
+                  }}
+                  onClick={() => setIsBoardLocked((prev) => !prev)}
+                >
+                  {isBoardLocked
+                    ? "🔒 Locked (Search)"
+                    : "🔓 Unlocked (Opponent)"}
+                </button>
+                <button
+                  className="win98-button"
+                  style={{ fontWeight: "bold" }}
+                  onClick={() =>
+                    setTypingDir((prev) => (prev === "H" ? "V" : "H"))
+                  }
+                  title="Tip: Hold Shift while typing to place a blank tile (0 points)"
+                >
+                  Typing: {typingDir === "H" ? "Across ➔" : "Down ⬇"}{" "}
+                  (Shift=Blank)
+                </button>
+                <button
+                  className="win98-button"
+                  style={{
+                    fontWeight: "bold",
+                    opacity: past.length === 0 ? 0.5 : 1,
+                    cursor: past.length === 0 ? "not-allowed" : "pointer",
+                  }}
+                  onClick={handleUndo}
+                  disabled={past.length === 0}
+                  title="Undo last play or change (Ctrl+Z)"
+                >
+                  ↶ Undo
+                </button>
+                <button
+                  className="win98-button"
+                  style={{
+                    fontWeight: "bold",
+                    opacity: future.length === 0 ? 0.5 : 1,
+                    cursor: future.length === 0 ? "not-allowed" : "pointer",
+                  }}
+                  onClick={handleRedo}
+                  disabled={future.length === 0}
+                  title="Redo undone play or change (Ctrl+Y)"
+                >
+                  Redo ↷
+                </button>
+                <button className="win98-button" onClick={clearBoard}>
+                  Clear Board
+                </button>
+                <div
+                  style={{
+                    width: "1px",
+                    backgroundColor: "var(--w98-border-dark)",
+                    margin: "0 4px",
+                  }}
+                />
+                <button
+                  className="win98-button"
+                  onClick={exportGame}
+                  title="Export game state"
+                >
+                  💾 Export
+                </button>
+                <label
+                  className="win98-button"
+                  style={{
+                    display: "inline-block",
+                    cursor: "pointer",
+                    textAlign: "center",
+                  }}
+                  title="Import game state"
+                >
+                  📂 Import
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={importGame}
+                    style={{ display: "none" }}
+                  />
+                </label>
+                
+                <div className="toolbar-separator" />
+                {/* Button to flip the theme state, allowing instant visual switching */}
+                <button 
+                  className="win98-button" 
+                  onClick={() => setTheme(t => t === "classic" ? "wood" : "classic")} 
+                  title="Toggle Visual Theme"
+                >
+                  🎨 Theme: {theme === "classic" ? "Win98" : "Wood"}
+                </button>
+              </div>
+            </div>
+
+            <div className="v3-layout">
+              <div>
+                
+                <div className="board-grid-container win98-inset">
+                  <div className="board-grid">
+                    <div className="board-header"></div>
+                    {COLUMNS.map((col) => (
+                      <div key={col} className="board-header">
+                        {col}
+                      </div>
+                    ))}
+

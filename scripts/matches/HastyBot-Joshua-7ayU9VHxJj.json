@@ -1,0 +1,152 @@
+[
+  {
+    "player": "HastyBot",
+    "rack": "AEIILNR",
+    "leave": "",
+    "score": 66
+  },
+  {
+    "player": "Joshua",
+    "rack": "AEERRTU",
+    "leave": "",
+    "score": 61
+  },
+  {
+    "player": "HastyBot",
+    "rack": "EEIIRTU",
+    "leave": "EIR",
+    "score": 20
+  },
+  {
+    "player": "Joshua",
+    "rack": "DGIOSSV",
+    "leave": "DOS",
+    "score": 24
+  },
+  {
+    "player": "HastyBot",
+    "rack": "EIIKPRY",
+    "leave": "EIPR",
+    "score": 19
+  },
+  {
+    "player": "Joshua",
+    "rack": "DLNOSUY",
+    "leave": "DLSU",
+    "score": 33
+  },
+  {
+    "player": "HastyBot",
+    "rack": "ABEIOPR",
+    "leave": "AEI",
+    "score": 27
+  },
+  {
+    "player": "Joshua",
+    "rack": "DDLORSU",
+    "leave": "LRSU",
+    "score": 24
+  },
+  {
+    "player": "HastyBot",
+    "rack": "AEEILTU",
+    "leave": "AEL",
+    "score": 16
+  },
+  {
+    "player": "Joshua",
+    "rack": "ELLQRSU",
+    "leave": "",
+    "score": 84
+  },
+  {
+    "player": "HastyBot",
+    "rack": "ACELNNW",
+    "leave": "CN",
+    "score": 32
+  },
+  {
+    "player": "Joshua",
+    "rack": "ADEMOTX",
+    "leave": "AEMT",
+    "score": 57
+  },
+  {
+    "player": "HastyBot",
+    "rack": "BCDEINO",
+    "leave": "B",
+    "score": 52
+  },
+  {
+    "player": "Joshua",
+    "rack": "AEEMORT",
+    "leave": "AEORT",
+    "score": 18
+  },
+  {
+    "player": "HastyBot",
+    "rack": "??BFOTT",
+    "leave": "",
+    "score": 62
+  },
+  {
+    "player": "Joshua",
+    "rack": "ACEORTZ",
+    "leave": "ACEORT",
+    "score": 30
+  },
+  {
+    "player": "HastyBot",
+    "rack": "AAEHNNP",
+    "leave": "AENP",
+    "score": 23
+  },
+  {
+    "player": "Joshua",
+    "rack": "ACEJORT",
+    "leave": "JO",
+    "score": 41
+  },
+  {
+    "player": "HastyBot",
+    "rack": "AEENPSV",
+    "leave": "EENS",
+    "score": 31
+  },
+  {
+    "player": "Joshua",
+    "rack": "AAIJMOS",
+    "leave": "AAOS",
+    "score": 26
+  },
+  {
+    "player": "HastyBot",
+    "rack": "EEGINSW",
+    "leave": "GINS",
+    "score": 23
+  },
+  {
+    "player": "Joshua",
+    "rack": "AAAGOOS",
+    "leave": "AAOO",
+    "score": 21
+  },
+  {
+    "player": "HastyBot",
+    "rack": "FGHINS",
+    "leave": "F",
+    "score": 18
+  },
+  {
+    "player": "Joshua",
+    "rack": "AAOO",
+    "leave": "AA",
+    "score": 12
+  },
+  {
+    "player": "HastyBot",
+    "rack": "F",
+    "leave": "",
+    "score": 6
+  }
+]

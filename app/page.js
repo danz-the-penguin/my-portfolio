@@ -64,32 +64,18 @@ const PROJECTS = [
     link: "#",
   },
   {
-    title: "Scrabble Checker Pro (BETA)",
+    title: "Waddleword-Next",
     description:
-      "A full-featured interactive Scrabble engine styled in a retro Windows 98 interface. Features dynamic keyboard navigation over a 15x15 board grid with premium tile multipliers (2L, 3L, 2W, 3W, Center), live previewing on hover, auto-updating rack states, and real-time strategic play ranking that evaluates total score alongside board exposure risk (e.g., exposing Triple Word scores). Optimised with useDeferredValue and O(1) set lookups to deliver non-blocking validation against external lexicons.",
-    tags: ["html", "css", "React", "Next.js", "json"],
-    link: "https://penguins-portfolio.vercel.app/scpro_beta",
+      "Tournament-Grade Scrabble Analysis Engine & Woogles AI Sparring Suite in a Windows 98 Aesthetic (Rust + Tauri v2 + React)",
+    tags: ["rust", "Tauri", "React", "json"],
+    link: "https://penguins-portfolio.vercel.app/waddleword-next",
   },
   {
-    title: "Scrabble Checker Pro",
+    title: "Drug Lord: Revamped",
     description:
-      "A full-featured interactive Scrabble engine styled in a retro Windows 98 interface. Features dynamic keyboard navigation over a 15x15 board grid with premium tile multipliers (2L, 3L, 2W, 3W, Center), live previewing on hover, auto-updating rack states, and real-time strategic play ranking that evaluates total score alongside board exposure risk (e.g., exposing Triple Word scores). Optimised with useDeferredValue and O(1) set lookups to deliver non-blocking validation against external lexicons.",
-    tags: ["html", "css", "React", "Next.js", "json"],
-    link: "https://penguins-portfolio.vercel.app/scpro",
-  },
-  {
-    title: "Scrabble Checker Pro V3",
-    description:
-      "A full-featured interactive Scrabble engine styled in a retro Windows 98 interface. Features dynamic keyboard navigation over a 15x15 board grid with premium tile multipliers (2L, 3L, 2W, 3W, Center), live previewing on hover, auto-updating rack states, and real-time strategic play ranking that evaluates total score alongside board exposure risk (e.g., exposing Triple Word scores). Optimised with useDeferredValue and O(1) set lookups to deliver non-blocking validation against external lexicons.",
-    tags: ["html", "css", "React", "Next.js", "json"],
-    link: "https://penguins-portfolio.vercel.app/scprov3",
-  },
-  {
-    title: "Scrabble Checker Pro V3 (BETA)",
-    description:
-      "A full-featured interactive Scrabble engine styled in a retro Windows 98 interface. Features dynamic keyboard navigation over a 15x15 board grid with premium tile multipliers (2L, 3L, 2W, 3W, Center), live previewing on hover, auto-updating rack states, and real-time strategic play ranking that evaluates total score alongside board exposure risk (e.g., exposing Triple Word scores). Optimised with useDeferredValue and O(1) set lookups to deliver non-blocking validation against external lexicons.",
-    tags: ["html", "css", "React", "Next.js", "json"],
-    link: "https://penguins-portfolio.vercel.app/scprov3_beta",
+      "A ground-up modern reimagination of Fred Bulback's legendary Windows shareware classic Drug Lord 2.2 (1999–2003). Elevated with Leaflet tactical raster smuggling maps (CartoDB Dark / Esri Satellite / Carto Voyager), 39 global metropolises with ASEAN expansion, Banque Privée de Genève (4 Swiss security tiers, Alpine bearer bonds, consular immunity), modular safehouse fortifications, narco-aviation fleet with airframe wear & avionics modules, and a Syndicate War Room with territory dominance, protection rackets, and black-ops hitman strikes.",
+    tags: ["TypeScript", "Vite", "React", "Tailwind", "json"],
+    link: "https://github.com/danz-the-penguin/druglord-revanced",
   },
 ];
 

@@ -9,7 +9,8 @@
     "lint": "eslint",
     "gaddag:twl": "node scripts/build-gaddag.mjs ./public/twl06.txt ./public/gaddag_twl.bin",
     "gaddag:sowpods": "node scripts/build-gaddag.mjs ./public/sowpods.txt ./public/gaddag_sowpods.bin",
-    "gaddag:all": "npm run gaddag:twl && npm run gaddag:sowpods"
+    "gaddag:all": "npm run gaddag:twl && npm run gaddag:sowpods",
+    "train": "node scripts/convert_gcg_to_training.js && node scripts/train_heuristics.js" 
   },
   "dependencies": {
     "cobe": "^2.0.1",

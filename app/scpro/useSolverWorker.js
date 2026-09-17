@@ -4,22 +4,25 @@ export function useSolverWorker(
   deferredRack,
   deferredBoard,
   activePreset,
-  useTwl,
-  useSowpods,
+  activeLexicon,
   sortMode,
   enableIntel,
   intelMode,
-  manualAvailableTiles
+  manualAvailableTiles,
+  scoreDifferential,
+  equityMode
 ) {
   const [candidatePlays, setCandidatePlays] = useState([]);
   const [wordCheckResult, setWordCheckResult] = useState(null);
   const [isSolving, setIsSolving] = useState(false);
+  const [gpuEnabled, setGpuEnabled] = useState(false);
   
   const workersRef = useRef([]);
   const resolveQueueRef = useRef(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      if (navigator.gpu) setGpuEnabled(true);
       const numWorkers = navigator.hardwareConcurrency ? Math.min(navigator.hardwareConcurrency, 8) : 4;
       const newWorkers = [];
       
@@ -31,7 +34,7 @@ export function useSolverWorker(
              return;
           }
           if (resolveQueueRef.current) {
-            resolveQueueRef.current(i, e.data || []);
+            resolveQueueRef.current(i, e.data.plays || [], e.data.jobId);
           }
         };
         newWorkers.push(worker);
@@ -56,7 +59,9 @@ export function useSolverWorker(
     let completed = 0;
     let mergedPlays = [];
     
-    resolveQueueRef.current = (workerId, plays) => {
+    const currentJobId = Date.now();
+    resolveQueueRef.current = (workerId, plays, jobId) => {
+       if (jobId !== currentJobId) return;
        mergedPlays = mergedPlays.concat(plays);
        completed++;
        
@@ -93,13 +98,15 @@ export function useSolverWorker(
          rack: deferredRack,
          board: deferredBoard,
          activePreset,
-         useTwl,
-         useSowpods,
+         activeLexicon,
          sortMode,
          enableIntel,
          manualAvailableTiles: intelMode === "manual" ? manualAvailableTiles : "",
+         scoreDifferential,
+         equityMode,
          workerId: i,
-         numWorkers: numWorkers
+         numWorkers: numWorkers,
+         jobId: currentJobId
        });
     }
 
@@ -107,19 +114,20 @@ export function useSolverWorker(
     deferredBoard,
     deferredRack,
     activePreset,
-    useTwl,
-    useSowpods,
+    activeLexicon,
     sortMode,
     enableIntel,
     intelMode,
     manualAvailableTiles,
+    scoreDifferential,
+    equityMode
   ]);
 
   const checkWord = useCallback((word) => {
      if (workersRef.current.length > 0 && word) {
-        workersRef.current[0].postMessage({ type: "CHECK_WORD", word });
+        workersRef.current[0].postMessage({ type: "CHECK_WORD", word, activeLexicon });
      }
-  }, []);
+  }, [activeLexicon]);
 
-  return { candidatePlays, isSolving, checkWord, wordCheckResult };
+  return { candidatePlays, isSolving, checkWord, wordCheckResult, gpuEnabled };
 }

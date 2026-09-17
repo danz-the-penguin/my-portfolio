@@ -3,10 +3,22 @@
 const REV_CODE = 26; // '#' Reversal separator
 const MAX_RESULTS = 131072;
 
+
 let gaddagTwl = null;
 let gaddagSowpods = null;
+let gaddagNwl2023 = null;
+let gaddagCsw21 = null;
+let gaddagCsw24 = null;
 let synergyMatrix = null;
+let trainedWeights = null;
+let currentEquityMode = "static";
 let gpuDevice = null;
+let SYNERGY_WEIGHTS = {};
+
+fetch('/synergy.json')
+  .then(res => res.json())
+  .then(data => SYNERGY_WEIGHTS = data)
+  .catch(console.error);
 let gpuPipeline = null;
 
 // Tournament Base Leave Equity (scaled in 0.1 pts)
@@ -57,54 +69,101 @@ const RES_TOTAL_VAL = new Float32Array(MAX_RESULTS);
 const RES_ROW = new Uint8Array(MAX_RESULTS);
 const RES_COL = new Uint8Array(MAX_RESULTS);
 const RES_DIR = new Uint8Array(MAX_RESULTS);
-const RES_EXPOSES_3W = new Uint8Array(MAX_RESULTS);
+const RES_TACTICS = new Uint8Array(MAX_RESULTS);
 const RES_LEAVE_CHARS = new Uint8Array(MAX_RESULTS * 7);
 const RES_LEAVE_LEN = new Uint8Array(MAX_RESULTS);
 
-const INDEX_ARRAY = new Uint16Array(MAX_RESULTS);
+const INDEX_ARRAY = new Uint32Array(MAX_RESULTS);
 const ALL_LETTERS_MASK = 0x03ffffff;
 
-async function loadAssets() {
+
+// ==========================================
+// WebGPU Initialization
+// ==========================================
+async function initWebGPU() {
+  if (!navigator.gpu) {
+    console.warn("WebGPU not supported on this browser. Falling back to CPU MCTS.");
+    return;
+  }
   try {
-    const [twlRes, sowpodsRes, synergyRes, wgslRes] = await Promise.all([
-      fetch("/gaddag_twl.bin"),
-      fetch("/gaddag_sowpods.bin"),
-      fetch("/synergy_weights.bin"),
-      fetch("/mc_simulator.wgsl"),
-    ]);
-
-    if (twlRes.ok) gaddagTwl = new Uint32Array(await twlRes.arrayBuffer());
-    if (sowpodsRes.ok)
-      gaddagSowpods = new Uint32Array(await sowpodsRes.arrayBuffer());
-    if (synergyRes.ok)
-      synergyMatrix = new Float32Array(await synergyRes.arrayBuffer());
-
-    // Initialize WebGPU Pipeline
-    if (navigator.gpu && wgslRes.ok) {
-      const adapter = await navigator.gpu.requestAdapter();
-      if (adapter) {
-        gpuDevice = await adapter.requestDevice();
-        const wgslCode = await wgslRes.text();
-        const shaderModule = gpuDevice.createShaderModule({ code: wgslCode });
-        gpuPipeline = gpuDevice.createComputePipeline({
-          layout: "auto",
-          compute: {
-            module: shaderModule,
-            entryPoint: "main",
-          },
-        });
-        console.log("WebGPU MCTS Pipeline successfully compiled!");
-      }
-    } else {
-      console.warn(
-        "WebGPU not supported or wgsl fetch failed. Falling back to CPU MCTS.",
-      );
-    }
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) return;
+    gpuDevice = await adapter.requestDevice();
   } catch (err) {
-    console.error("Failed to load assets or initialize GPU:", err);
+    console.error("WebGPU Init Error:", err);
   }
 }
-const loadPromise = loadAssets();
+
+let currentLexiconStr = null;
+let lexiconPromise = null;
+
+async function ensureLexicon(lexicon) {
+  if (currentLexiconStr === lexicon && (gaddagNwl2023 || gaddagCsw21 || gaddagTwl || gaddagSowpods || gaddagCsw24)) return;
+  
+  if (lexiconPromise && currentLexiconStr === lexicon) {
+     await lexiconPromise;
+     return;
+  }
+  
+  currentLexiconStr = lexicon;
+  
+  lexiconPromise = (async () => {
+      // Initialize WebGPU if needed
+      if (navigator.gpu && !gpuDevice) {
+        await initWebGPU();
+      }
+      
+      // Free memory
+      gaddagNwl2023 = null;
+      gaddagCsw21 = null;
+      gaddagTwl = null;
+      gaddagSowpods = null;
+      
+      const dictUrl = lexicon === 'csw24' ? '/gaddag_csw24.bin' :
+                      lexicon === 'csw21' ? '/gaddag_csw21.bin' :
+                      lexicon === 'twl06' ? '/gaddag_twl06.bin' :
+                      lexicon === 'sowpods' ? '/gaddag_sowpods.bin' :
+                      '/gaddag_nwl2023.bin';
+                      
+      const [dictRes, synergyRes, wgslRes, trainedRes, synergyJsonRes] = await Promise.all([
+          fetch(dictUrl),
+          !synergyMatrix ? fetch("/synergy_weights.bin") : Promise.resolve(null),
+          !gpuPipeline ? fetch("/mc_simulator.wgsl") : Promise.resolve(null),
+          !trainedWeights ? fetch("/synergy_trained.json") : Promise.resolve(null),
+          Object.keys(SYNERGY_WEIGHTS).length === 0 ? fetch("/synergy.json").catch(() => null) : Promise.resolve(null),
+      ]);
+      
+      if (dictRes && dictRes.ok) {
+         const arr = new Uint32Array(await dictRes.arrayBuffer());
+         if (lexicon === 'csw24') gaddagCsw24 = arr;
+         else if (lexicon === 'csw21') gaddagCsw21 = arr;
+         else if (lexicon === 'twl06') gaddagTwl = arr;
+         else if (lexicon === 'sowpods') gaddagSowpods = arr;
+         else gaddagNwl2023 = arr;
+      }
+      
+      if (synergyRes && synergyRes.ok) {
+         synergyMatrix = new Float32Array(await synergyRes.arrayBuffer());
+      }
+      if (trainedRes && trainedRes.ok) {
+         trainedWeights = await trainedRes.json();
+      }
+      if (synergyJsonRes && synergyJsonRes.ok) {
+         SYNERGY_WEIGHTS = await synergyJsonRes.json();
+      }
+      
+      if (wgslRes && wgslRes.ok && gpuDevice) {
+         const wgslCode = await wgslRes.text();
+         const shaderModule = gpuDevice.createShaderModule({ code: wgslCode });
+         gpuPipeline = gpuDevice.createComputePipeline({
+           layout: "auto",
+           compute: { module: shaderModule, entryPoint: "main" },
+         });
+      }
+  })();
+  
+  await lexiconPromise;
+}
 
 function isWordValidCodes(gaddag, buf, len) {
   if (len < 2) return false;
@@ -159,86 +218,81 @@ function isWordValidCodes(gaddag, buf, len) {
   return false;
 }
 
-// UPGRADE 1: Aggressive Duplicate & Anti-Clumping Penalty
-function hashLeave(counts, blanks) {
-  let h = blanks;
+function evaluateLeaveEquity(counts, blanksRemaining, totalUnseen) {
+  let chars = [];
+  let vCount = counts[0] + counts[4] + counts[8] + counts[14] + counts[20];
+  let yCount = counts[24];
+  let cCount = 0;
+  let equity = 0;
+  
+  // Triplet & Quadruplet Exterminator
   for (let c = 0; c < 26; c++) {
-    if (counts[c] > 0) {
-      h = (Math.imul(31, h) + counts[c] * (c + 1)) | 0;
+    if (counts[c] === 3) equity -= 10.0; 
+    if (counts[c] >= 4) equity -= 25.0; 
+    
+    if (c !== 0 && c !== 4 && c !== 8 && c !== 14 && c !== 20 && c !== 24) {
+      cCount += counts[c];
+    }
+    for (let i = 0; i < counts[c]; i++) {
+      chars.push(String.fromCharCode(65 + c));
     }
   }
-  return Math.abs(h);
-}
+  for (let i = 0; i < blanksRemaining; i++) {
+    chars.push('?');
+  }
 
-function evaluateLeaveEquity(counts, blanksRemaining, totalUnseen) {
-  let equity = 0;
-  if (synergyMatrix && synergyMatrix.length > 0) {
-    const key = hashLeave(counts, blanksRemaining) % synergyMatrix.length;
-    equity = synergyMatrix[key];
+  const leaveLen = chars.length;
+  if (leaveLen === 0) return 0;
+
+  // Trained ML override (falls back to Quackle base pairs in static/EQ mode)
+  const leaveStr = chars.sort().join('');
+  if (currentEquityMode === "trained" && trainedWeights && trainedWeights[leaveStr] !== undefined) {
+    equity += trainedWeights[leaveStr];
   } else {
-    // Strategic Fallback (Since synergyMatrix is not loaded)
-    let numConsonants = 0;
-    let numVowels = 0;
+    // Base Equity
+    for (let i = 0; i < leaveLen; i++) {
+      const ch = chars[i];
+      equity += (SYNERGY_WEIGHTS[ch] || 0);
+    }
 
-    for (let c = 0; c < 26; c++) {
-      const n = counts[c];
-      if (n > 0) {
-        // Base Tile Equity
-        equity += (BASE_LEAVE_EQUITY[c] / 10.0) * n;
-
-        // Duplication Penalties
-        if (n > 1) {
-          if (c === 4)
-            equity -= 2.0; // E
-          else if (c === 0 || c === 8)
-            equity -= 2.5; // A, I
-          else if (c === 14)
-            equity -= 3.0; // O
-          else if (c === 20)
-            equity -= 4.0; // U
-          else equity -= 3.5; // duplicate consonants
-        }
-
-        if (c === 0 || c === 4 || c === 8 || c === 14 || c === 20) {
-          numVowels += n;
-        } else if (c !== 24) {
-          // Y is pseudo-vowel
-          numConsonants += n;
+    // True Pair Synergies (with fixed Blank parsing)
+    for (let i = 0; i < leaveLen; i++) {
+      for (let j = i + 1; j < leaveLen; j++) {
+        let c1 = chars[i];
+        let c2 = chars[j];
+        let pairKey = "";
+        
+        if (c1 === '?' && c2 === '?') pairKey = "??";
+        else if (c1 === '?') pairKey = c2 + "?";
+        else if (c2 === '?') pairKey = c1 + "?";
+        else pairKey = c1 <= c2 ? c1 + c2 : c2 + c1;
+        
+        if (SYNERGY_WEIGHTS[pairKey] !== undefined) {
+          equity += SYNERGY_WEIGHTS[pairKey];
         }
       }
     }
-
-    equity += blanksRemaining * (BLANK_LEAVE_EQUITY / 10.0);
-
-    // Vowel/Consonant Ratio Synergy (weighted by how many tiles are kept)
-    const totalVC = numVowels + numConsonants;
-    if (totalVC > 1) {
-      const idealVowels = totalVC * 0.42;
-      const diff = Math.abs(numVowels - idealVowels);
-      const severity = totalVC / 7.0;
-      equity -= diff * 2.0 * severity;
-    }
-
-    // Specific Synergies & Anti-Synergies
-    if (counts[16] > 0 && counts[20] === 0 && blanksRemaining === 0) {
-      equity -= 8.0; // Q without U
-    }
-    if (counts[2] > 0 && counts[7] > 0) equity += 2.5; // CH
-    if (counts[18] > 0 && counts[7] > 0) equity += 1.5; // SH
-    if (counts[19] > 0 && counts[7] > 0) equity += 1.5; // TH
-
-    // Bingo Core Synergies
-    if (counts[4] > 0 && counts[17] > 0) equity += 2.0; // ER
-    if (counts[8] > 0 && counts[13] > 0) equity += 1.5; // IN
-    if (counts[0] > 0 && counts[11] > 0) equity += 1.0; // AL
-    if (counts[18] > 0 && counts[19] > 0) equity += 1.0; // ST
   }
 
-  // Pre-Endgame Stuck Tile Exterminator (<12 tiles left in game)
+  // Macro-Penalties: Starvation and Safe Flood Balancing
+  let totalTiles = vCount + cCount + yCount + blanksRemaining;
+  if (totalTiles >= 4) {
+    if (vCount === 0 && blanksRemaining === 0) equity -= 12.0; // Consonant starvation
+    if (cCount === 0 && blanksRemaining === 0) equity -= 12.0; // Vowel starvation
+    
+    // Balanced Flood Penalty: High enough to encourage balance, low enough to preserve Bingos
+    if (vCount > cCount + 3) equity -= 2.5; // Mild Vowel Flood
+    if (cCount > vCount + 3) equity -= 2.5; // Mild Consonant Flood
+  }
+
+  if (counts[16] > 0 && counts[20] === 0 && blanksRemaining === 0) {
+    equity -= 15.0; 
+  }
+
   if (totalUnseen <= 12) {
-    if (counts[21] > 0) equity -= 4.5; // V
-    if (counts[22] > 0) equity -= 3.5; // W
-    if (counts[9] > 0 || counts[23] > 0 || counts[25] > 0) equity -= 2.0; // J, X, Z
+    if (counts[21] > 0) equity -= 5.0; 
+    if (counts[22] > 0) equity -= 4.0; 
+    if (counts[9] > 0 || counts[23] > 0 || counts[25] > 0) equity -= 3.0; 
   }
 
   return equity;
@@ -589,6 +643,9 @@ function findOpponentBestScore(
   };
 }
 
+
+// Note: Batched MCTS compute pass is handled entirely by runGPUSimulations
+
 async function runGPUSimulations(
   finalPlays,
   unseenArray,
@@ -598,7 +655,7 @@ async function runGPUSimulations(
   if (!gpuDevice || !gpuPipeline || !activeGaddag) return false;
 
   finalPlays.sort((a, b) => b.totalVal - a.totalVal);
-  const topN = Math.min(finalPlays.length, 20);
+  const topN = Math.min(finalPlays.length, 16); // Widen MCTS candidate pool
   const SIMS_PER_CANDIDATE = 1024;
 
   const configData = new Uint32Array([
@@ -609,7 +666,7 @@ async function runGPUSimulations(
   ]);
   const configBuffer = gpuDevice.createBuffer({
     size: configData.byteLength,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
   gpuDevice.queue.writeBuffer(configBuffer, 0, configData);
 
@@ -663,21 +720,13 @@ async function runGPUSimulations(
     usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
   });
 
-  // Phase 3: Bind GADDAG
-  const gaddagBuffer = gpuDevice.createBuffer({
-    size: activeGaddag.byteLength,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-  });
-  gpuDevice.queue.writeBuffer(gaddagBuffer, 0, activeGaddag);
-
   const bindGroup = gpuDevice.createBindGroup({
     layout: gpuPipeline.getBindGroupLayout(0),
     entries: [
       { binding: 0, resource: { buffer: configBuffer } },
       { binding: 1, resource: { buffer: boardsBuffer } },
       { binding: 2, resource: { buffer: unseenBuffer } },
-      { binding: 3, resource: { buffer: spreadBuffer } },
-      { binding: 4, resource: { buffer: gaddagBuffer } },
+      { binding: 4, resource: { buffer: spreadBuffer } },
     ],
   });
 
@@ -710,25 +759,26 @@ async function runGPUSimulations(
     }
     const avgOppScore = sum / SIMS_PER_CANDIDATE;
     finalPlays[i].netSpread = finalPlays[i].score - avgOppScore;
-    finalPlays[i].totalVal =
-      finalPlays[i].netSpread + finalPlays[i].leaveEquity * 0.7;
+    // CRITICAL FIX: Do NOT overwrite totalVal here. Let recordPlay's exact math stand.
   }
 
   readBuffer.unmap();
+  readBuffer.destroy(); // Fix Memory Leak
 
   configBuffer.destroy();
   boardsBuffer.destroy();
   unseenBuffer.destroy();
   spreadBuffer.destroy();
-  gaddagBuffer.destroy();
 
   return true;
 }
 
 self.onmessage = async function (e) {
-  await loadPromise;
+  if (!e.data) return;
+  await ensureLexicon(e.data.activeLexicon || "nwl2023");
 
   if (e.data && e.data.type === "CHECK_WORD") {
+    const activeLexicon = e.data.activeLexicon;
     const w = e.data.word.toLowerCase();
     const len = w.length;
     const wordCodes = new Int8Array(len);
@@ -736,18 +786,18 @@ self.onmessage = async function (e) {
       let charCode = w.charCodeAt(k);
       wordCodes[k] = charCode >= 97 ? charCode - 97 : charCode - 65;
     }
-    const inTwl = gaddagTwl
-      ? isWordValidCodes(gaddagTwl, wordCodes, len)
-      : false;
-    const inSowpods = gaddagSowpods
-      ? isWordValidCodes(gaddagSowpods, wordCodes, len)
-      : false;
+
+    let inDict = false;
+    if (activeLexicon === "csw24") inDict = gaddagCsw24 ? isWordValidCodes(gaddagCsw24, wordCodes, len) : false;
+    else if (activeLexicon === "csw21") inDict = gaddagCsw21 ? isWordValidCodes(gaddagCsw21, wordCodes, len) : false;
+    else if (activeLexicon === "twl06") inDict = gaddagTwl ? isWordValidCodes(gaddagTwl, wordCodes, len) : false;
+    else if (activeLexicon === "sowpods") inDict = gaddagSowpods ? isWordValidCodes(gaddagSowpods, wordCodes, len) : false;
+    else inDict = gaddagNwl2023 ? isWordValidCodes(gaddagNwl2023, wordCodes, len) : false;
 
     self.postMessage({
       type: "CHECK_WORD_RESULT",
       word: e.data.word,
-      inTwl,
-      inSowpods,
+      isValid: inDict,
     });
     return;
   }
@@ -756,26 +806,33 @@ self.onmessage = async function (e) {
     rack,
     board,
     activePreset,
-    useTwl,
-    useSowpods,
+    activeLexicon,
     sortMode,
     enableIntel,
     manualAvailableTiles,
+    scoreDifferential = 0,
+    equityMode = "static",
     workerId = 0,
     numWorkers = 1,
+    jobId = 0,
   } = e.data;
 
   if (!rack || !activePreset) {
-    self.postMessage([]);
+    self.postMessage({ plays: [], jobId });
     return;
   }
 
-  const gaddag = useTwl ? gaddagTwl : useSowpods ? gaddagSowpods : gaddagTwl;
+  let gaddag = gaddagNwl2023;
+  if (activeLexicon === "csw24") gaddag = gaddagCsw24;
+  else if (activeLexicon === "csw21") gaddag = gaddagCsw21;
+  else if (activeLexicon === "twl06") gaddag = gaddagTwl;
+  else if (activeLexicon === "sowpods") gaddag = gaddagSowpods;
   if (!gaddag) {
-    self.postMessage([]);
+    self.postMessage({ plays: [], jobId });
     return;
   }
 
+  currentEquityMode = equityMode;
   const {
     scores = {},
     premiums = {},
@@ -992,12 +1049,15 @@ self.onmessage = async function (e) {
       crossScoreTotal = 0,
       exposes3W = 0,
       exposes2W = 0,
-      exposes3L = 0;
+      exposes3L = 0,
+      blocksDWS = 0,
+      opensTWS = 0,
+      crossWordsCount = 0;
     const charOffset = resultsCount * 15;
     let wordLen = 0;
 
     for (let k = 0; k < 26; k++) REMAINING_COUNTS[k] = RACK_COUNTS[k];
-    let blanksLeft = initialWildcards;
+    let blanksLeft = wildcards;
 
     for (let p = startPos; p <= endPos; p++) {
       const charCode = PLACED_LETTERS[p];
@@ -1014,9 +1074,6 @@ self.onmessage = async function (e) {
       if (isExisting) {
         mainWordScore += BOARD_IS_BLANK[gIdx] ? 0 : SCORE_TABLE[charCode];
       } else {
-        if (isBlank) blanksLeft--;
-        else REMAINING_COUNTS[charCode]--;
-
         let letterVal = isBlank ? 0 : SCORE_TABLE[charCode];
         if (premium === 1) letterVal *= 2;
         else if (premium === 2) letterVal *= 3;
@@ -1034,14 +1091,20 @@ self.onmessage = async function (e) {
         const ltPrem = ltFree ? PREMIUM_GRID[r * 15 + c - 1] : 0;
         const rtPrem = rtFree ? PREMIUM_GRID[r * 15 + c + 1] : 0;
 
-        if (upPrem === 4 || dnPrem === 4 || ltPrem === 4 || rtPrem === 4)
+        if (premium === 3) blocksDWS = 1;
+        if (upPrem === 4 || dnPrem === 4 || ltPrem === 4 || rtPrem === 4) {
           exposes3W = 1;
+          if (!isBlank && (charCode === 0 || charCode === 4 || charCode === 8 || charCode === 14 || charCode === 20)) {
+            opensTWS = 1;
+          }
+        }
         if (upPrem === 3 || dnPrem === 3 || ltPrem === 3 || rtPrem === 3)
           exposes2W = 1;
         if (upPrem === 2 || dnPrem === 2 || ltPrem === 2 || rtPrem === 2)
           exposes3L = 1;
 
         if (LINE_HAS_PERP[p] === 1) {
+          crossWordsCount++;
           let pVal = isBlank ? 0 : SCORE_TABLE[charCode];
           if (premium === 1) pVal *= 2;
           else if (premium === 2) pVal *= 3;
@@ -1062,12 +1125,34 @@ self.onmessage = async function (e) {
       totalUnseen,
     );
 
-    // UPGRADE 4: Subtract Open Lane Defensive Risk from Total Value
+    // UPGRADE 4: Continuous Risk Scaling & Tactical Rewards
     let defensivePenalty = 0;
     if (exposes3W === 1) defensivePenalty += twsThreatWeight;
-    if (exposes2W === 1) defensivePenalty += 6.5; // Double-word exposure
-    if (exposes3L === 1) defensivePenalty += 4.0; // Triple-letter exposure
-    const totalPlayValue = totalScore + leaveEquity - defensivePenalty;
+    if (exposes2W === 1) defensivePenalty += 4.0; // Nerfed from 6.5
+    if (exposes3L === 1) defensivePenalty += 2.0; // Nerfed from 4.0
+    
+    // Asymmetrical Risk Scaling: Protect leads ruthlessly, maintain a 75% defense floor when behind
+    let riskMultiplier = 1.0;
+    if (scoreDifferential > 0) {
+      riskMultiplier += (scoreDifferential / 40.0);
+    } else {
+      riskMultiplier += (scoreDifferential / 150.0); 
+    }
+    riskMultiplier = Math.max(0.75, Math.min(riskMultiplier, 3.0));
+    defensivePenalty *= riskMultiplier;
+
+    // Proactive Tactical Bonuses & Turnover Cycling
+    let tacticalBonus = 0;
+    if (blocksDWS === 1) tacticalBonus += 5.0; 
+    if (crossWordsCount >= 2) tacticalBonus += 3.5;
+    
+    // Turnover Bonus: Aggressively reward playing 4-6 tiles to cycle the bag and hunt for blanks/S's.
+    // SteeBot does this. It sacrifices 3-4 points now to see 5 new tiles for next turn.
+    if (rackUsed >= 4 && rackUsed <= 6) {
+      tacticalBonus += (rackUsed * 1.5); 
+    }
+    
+    const totalPlayValue = totalScore + leaveEquity + tacticalBonus - defensivePenalty;
 
     const leaveOffset = resultsCount * 7;
     let leaveLen = 0;
@@ -1092,7 +1177,7 @@ self.onmessage = async function (e) {
     RES_ROW[resultsCount] = isVertical ? startPos : lineIdx;
     RES_COL[resultsCount] = isVertical ? lineIdx : startPos;
     RES_DIR[resultsCount] = isVertical ? 1 : 0;
-    RES_EXPOSES_3W[resultsCount] = exposes3W;
+    RES_TACTICS[resultsCount] = (exposes3W) | (opensTWS << 1) | (blocksDWS << 2) | ((crossWordsCount >= 2 ? 1 : 0) << 3);
 
     resultsCount++;
   };
@@ -1301,7 +1386,11 @@ self.onmessage = async function (e) {
           totalUnseen,
         );
         const expectedDrawValue = dumpCount * avgDrawEquityPerTile;
-        const tempoPenalty = -3.0;
+        // Anti-Surrender Tempo: Exchanging is strictly an emergency measure.
+        // Never give top bots free unanswered turns when winning OR losing.
+        let tempoPenalty = -5.0;
+        if (scoreDifferential < -30) tempoPenalty = -10.0; // Trailing? Never give away free turns to top bots!
+        else if (scoreDifferential > 30) tempoPenalty = -8.0; // Leading? Protect the lead ruthlessly.
 
         const totalVal = leaveEquity + expectedDrawValue + tempoPenalty;
 
@@ -1317,6 +1406,11 @@ self.onmessage = async function (e) {
             col: 0,
             dir: "EXCH",
             exposes3W: false,
+            opensTWS: false,
+            blocksDWS: false,
+            isHotSpot: false,
+            baseScore: 0,
+            defPenalty: 0,
           };
         }
       }
@@ -1437,17 +1531,6 @@ self.onmessage = async function (e) {
         totalValAdjusted = netSpread + RES_EQUITY[idx] * 0.5;
       }
     }
-    const wordCodes = new Int8Array(len);
-    for (let k = 0; k < len; k++) {
-      let charCode = wordStr.charCodeAt(k);
-      wordCodes[k] = charCode >= 97 ? charCode - 97 : charCode - 65;
-    }
-    const inTwl = gaddagTwl
-      ? isWordValidCodes(gaddagTwl, wordCodes, len)
-      : false;
-    const inSowpods = gaddagSowpods
-      ? isWordValidCodes(gaddagSowpods, wordCodes, len)
-      : false;
 
     finalPlays.push({
       word: wordStr,
@@ -1458,11 +1541,15 @@ self.onmessage = async function (e) {
       row,
       col,
       dir,
-      exposes3W: RES_EXPOSES_3W[idx] === 1,
+      exposes3W: (RES_TACTICS[idx] & 1) === 1,
+      opensTWS: (RES_TACTICS[idx] & 2) === 2,
+      blocksDWS: (RES_TACTICS[idx] & 4) === 4,
+      isHotSpot: (RES_TACTICS[idx] & 8) === 8,
+      baseScore: RES_SCORE[idx],
+      defPenalty: RES_SCORE[idx] + Math.round(RES_EQUITY[idx] * 10) / 10 - Math.round(totalValAdjusted * 10) / 10,
       oppBestReply,
       netSpread,
-      inTwl,
-      inSowpods,
+      isValid: true,
     });
 
     if (finalPlays.length >= 100) break;
@@ -1483,7 +1570,6 @@ self.onmessage = async function (e) {
 
   // Phase 2: Trigger WebGPU Compute Pass
   if (
-    false &&
     sortMode !== "score" &&
     gpuDevice &&
     totalUnseen > 7 &&
@@ -1505,7 +1591,8 @@ self.onmessage = async function (e) {
     isDeterministicOpponent &&
     finalPlays.length > 0
   ) {
-    for (let i = 0; i < finalPlays.length; i++) {
+    const endgameEvalCount = Math.min(finalPlays.length, topCandidatesCount);
+    for (let i = 0; i < endgameEvalCount; i++) {
       const play = finalPlays[i];
       if (play.dir === "EXCH") continue;
 
@@ -1545,8 +1632,12 @@ self.onmessage = async function (e) {
         continue;
       }
 
-      // Run 2-Ply Alpha-Beta Search (Opponent plays -> We play)
-      // Note: depth = 1 means Opponent plays. depth = 2 means Opp plays, We play.
+      // Dynamic Depth: As the unseen pool shrinks, we can safely unlock deeper perfect-play calculation.
+      let searchDepth = 2; // Default 2-ply
+      if (totalUnseen <= 5) searchDepth = 3; // 3-ply when bag is almost dead
+      if (totalUnseen <= 2) searchDepth = 4; // 4-ply perfect closure
+
+      // Run Dynamic Alpha-Beta Search
       const oppNetScore = alphaBetaEndgame(
         newBoard,
         newBoardIsBlank,
@@ -1555,7 +1646,7 @@ self.onmessage = async function (e) {
         OPP_RACK_COUNTS,
         oppWildcards,
         false, // It is NOT our turn (it's the opponent's turn)
-        2, // 2-Ply lookahead
+        searchDepth, 
         -10000,
         10000,
         gaddag,
@@ -1582,7 +1673,7 @@ self.onmessage = async function (e) {
     });
   }
 
-  self.postMessage(finalPlays);
+  self.postMessage({ plays: finalPlays, jobId });
 };
 function computeBoardState(board, boardIsBlank, gaddag) {
   const anchors = new Uint8Array(225);
@@ -1783,13 +1874,13 @@ function generatePlays(
             let wordBuilt = "";
             for (let p = minPos; p <= maxPos; p++) {
               const code = placed[p];
-              wordBuilt += String.fromCharCode(65 + code);
               const r = isVertical ? p : lineIdx;
               const c = isVertical ? lineIdx : p;
               const gIdx = r * 15 + c;
               const prem = PREMIUM_GRID[gIdx];
               const isExist = board[gIdx] !== 0;
-              const isB = placedBlank[p] === 1;
+              const isB = !isExist && placedBlank[p] === 1;
+              wordBuilt += String.fromCharCode((isB ? 97 : 65) + code);
 
               if (isExist) {
                 mScore += boardIsBlank[gIdx] ? 0 : SCORE_TABLE[code];
@@ -1914,6 +2005,7 @@ function generatePlays(
 
   return plays;
 }
+
 function alphaBetaEndgame(
   board,
   boardIsBlank,
@@ -1947,6 +2039,7 @@ function alphaBetaEndgame(
     return isTurnA ? spreadForA : -spreadForA;
   }
 
+
   const boardState = computeBoardState(board, boardIsBlank, gaddag);
   const activeCounts = isTurnA ? countsA : countsB;
   const activeWilds = isTurnA ? wildsA : wildsB;
@@ -1966,10 +2059,10 @@ function alphaBetaEndgame(
     return -alphaBetaEndgame(
       board,
       boardIsBlank,
-      countsB,
-      wildsB,
       countsA,
       wildsA,
+      countsB,
+      wildsB,
       !isTurnA,
       depth - 1,
       -beta,
@@ -2020,10 +2113,10 @@ function alphaBetaEndgame(
       alphaBetaEndgame(
         newBoard,
         newBoardIsBlank,
-        countsB,
-        wildsB,
-        newCounts,
-        newWilds,
+        isTurnA ? newCounts : countsA,
+        isTurnA ? newWilds : wildsA,
+        isTurnA ? countsB : newCounts,
+        isTurnA ? wildsB : newWilds,
         !isTurnA,
         depth - 1,
         -beta,
